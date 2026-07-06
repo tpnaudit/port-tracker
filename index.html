@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>My Port — Portfolio Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="seed-data.enc.js"></script>
+<script src="seed-data.js"></script>
+<style>
+:root{
+  --bg:#0d1020; --panel:#151a30; --panel2:#1b2140; --line:#262e52;
+  --text:#e8ecf8; --muted:#8b93b8; --accent:#6d8bff; --accent2:#9d6bff;
+  --green:#34d399; --red:#fb7185; --gold:#fbbf24;
+  --c-saving:#38bdf8; --c-fund:#818cf8; --c-bond:#34d399; --c-stock:#fb7185;
+  --c-gold:#fbbf24; --c-crypto:#c084fc; --c-re:#94a3b8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Prompt',system-ui,sans-serif;font-size:14px;min-height:100vh;
+  background-image:radial-gradient(1200px 500px at 80% -10%,rgba(109,139,255,.12),transparent),radial-gradient(900px 400px at 10% 110%,rgba(157,107,255,.10),transparent);}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:22px;font-weight:600;letter-spacing:.3px}
+h1 .grad{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);font-size:12.5px}
+.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:9px 16px;font-family:inherit;font-size:13.5px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:500;box-shadow:0 4px 18px rgba(109,139,255,.35)}
+.btn.small{padding:5px 11px;font-size:12.5px;border-radius:8px}
+.btn.danger:hover{border-color:var(--red);color:var(--red)}
+.tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:0}
+.tab{padding:9px 18px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-size:14px;transition:.15s}
+.tab.active{color:var(--text);border-bottom-color:var(--accent);font-weight:500}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card .lbl{color:var(--muted);font-size:12px;margin-bottom:6px}
+.card .val{font-size:22px;font-weight:600;letter-spacing:.3px}
+.card .delta{font-size:12.5px;margin-top:4px}
+.pos{color:var(--green)} .neg{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px}
+.grid2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:900px){.grid2,.grid2b{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.panel h3{font-size:14px;font-weight:500;margin-bottom:12px;color:#c3cbe8}
+.chartbox{position:relative;height:280px}
+.chartbox.tall{height:320px}
+.checks{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.checks label{display:flex;align-items:center;gap:5px;cursor:pointer}
+table{border-collapse:collapse;width:100%;font-size:13px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--panel2)}
+td.name,th.name{text-align:left;position:sticky;left:0;background:var(--panel);z-index:2;min-width:150px;border-right:1px solid var(--line)}
+tr.cat td{background:var(--panel2);font-weight:600}
+tr.cat td.name{background:var(--panel2)}
+tr.total td{background:#20284d;font-weight:700;font-size:13.5px}
+tr.total td.name{background:#20284d}
+tr.sub td{color:#aeb6d8}
+tr.pct td{color:var(--muted);font-size:12px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:8px;vertical-align:1px}
+.colbtns{display:flex;gap:4px;justify-content:flex-end;margin-top:3px}
+.iconbtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:1px 4px;border-radius:5px}
+.iconbtn:hover{color:var(--text);background:var(--panel)}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(5,8,20,.72);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:30px 14px;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:100%;max-width:760px;padding:22px 24px}
+.modal h2{font-size:17px;font-weight:600;margin-bottom:16px}
+.mrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:var(--muted)}
+input,select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 11px;font-family:inherit;font-size:13.5px;outline:none;transition:.15s}
+input:focus,select:focus{border-color:var(--accent)}
+input.err{border-color:var(--red)}
+input.num{text-align:right;width:150px}
+.acc-grid{display:grid;grid-template-columns:150px 1fr 1fr 110px 30px;gap:8px;align-items:center;margin-bottom:7px}
+.acc-grid .cv{text-align:right;color:var(--muted);font-size:12.5px}
+.groupbox{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:12px}
+.grouphead{display:flex;align-items:center;margin-bottom:11px}
+.grouphead .gt{margin-left:auto;font-weight:600;font-size:13.5px}
+.hint{font-size:11.5px;color:var(--muted);margin-top:2px}
+.modalfoot{display:flex;align-items:center;gap:12px;margin-top:18px;padding-top:15px;border-top:1px solid var(--line)}
+.bigtotal{font-size:19px;font-weight:700}
+.addacc{background:none;border:1px dashed var(--line);color:var(--muted);width:100%;padding:7px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:12.5px}
+.addacc:hover{color:var(--accent);border-color:var(--accent)}
+.set-grid{display:grid;grid-template-columns:200px 130px 160px;gap:9px;align-items:center;margin-bottom:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--accent);padding:11px 22px;border-radius:12px;font-size:13.5px;z-index:99;display:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.fxline{display:flex;align-items:center;gap:8px}
+.mut{color:var(--muted)}
+.pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.settings-sec{margin-bottom:26px}
+.acclist{display:flex;flex-wrap:wrap;gap:8px}
+.accpill{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:12.5px}
+.accpill button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px}
+.accpill button:hover{color:var(--red)}
+footer{margin-top:28px;color:var(--muted);font-size:11.5px;text-align:center}
+.pill.sync-ok{border-color:rgba(52,211,153,.5);color:var(--green)}
+.pill.sync-busy{border-color:rgba(109,139,255,.5);color:var(--accent)}
+.pill.sync-err{border-color:rgba(251,113,133,.5);color:var(--red)}
+/* ===== mobile ===== */
+@media(max-width:640px){
+  .wrap{padding:14px 12px 50px}
+  h1{font-size:19px}
+  header{gap:8px}
+  .btn{padding:8px 12px;font-size:12.5px}
+  .tabs{overflow-x:auto}
+  .tab{padding:8px 13px;white-space:nowrap}
+  .cards{grid-template-columns:1fr 1fr;gap:9px}
+  .card{padding:12px 13px;border-radius:12px}
+  .card .val{font-size:17px}
+  .card .delta{font-size:11px}
+  .chartbox{height:230px}
+  .chartbox.tall{height:260px}
+  .panel{padding:13px 12px}
+  .overlay{padding:8px 6px}
+  .modal{padding:16px 13px;border-radius:14px}
+  .acc-legend{display:none!important}
+  .acc-grid{grid-template-columns:1fr 1fr 30px;row-gap:4px;margin-bottom:12px}
+  .acc-grid > div:nth-child(1){grid-column:1;grid-row:1;font-size:13px;align-self:center}
+  .acc-grid > input[data-f="t"]{grid-column:1;grid-row:2}
+  .acc-grid > input[data-f="u"]{grid-column:2;grid-row:2}
+  .acc-grid .cv{grid-column:2;grid-row:1;align-self:center}
+  .acc-grid .iconbtn{grid-column:3;grid-row:1}
+  .set-grid{grid-template-columns:1fr 80px 110px}
+  th,td{padding:7px 9px;font-size:12px}
+  td.name,th.name{min-width:118px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>💼 My <span class="grad">Port</span></h1>
+      <div class="sub" id="lastUpdated"></div>
+      <div style="margin-top:5px"><span class="pill" id="syncChip">💾 ข้อมูลเก็บในเครื่องนี้</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="exportJSON()">⬇ สำรองข้อมูล</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">⬆ นำเข้า</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    <button class="btn primary" onclick="openEditor(null)">＋ อัปเดตพอร์ต</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="overview" onclick="switchTab('overview')">ภาพรวม</div>
+    <div class="tab" data-tab="table" onclick="switchTab('table')">ตารางข้อมูล</div>
+    <div class="tab" data-tab="settings" onclick="switchTab('settings')">ตั้งค่า</div>
+  </div>
+
+  <div id="tab-overview">
+    <div class="cards" id="statCards"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>มูลค่าพอร์ตตามเวลา</h3>
+        <div class="checks">
+          <label><input type="checkbox" id="ckExCrypto" onchange="renderOverview()"> ไม่รวม Crypto</label>
+          <label><input type="checkbox" id="ckExRe" onchange="renderOverview()"> ไม่รวม Crypto + อสังหาฯ</label>
+        </div>
+        <div class="chartbox tall"><canvas id="chLine"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>สัดส่วนพอร์ตปัจจุบัน</h3>
+        <div class="chartbox tall"><canvas id="chDonut"></canvas></div>
+      </div>
+    </div>
+    <div class="grid2b">
+      <div class="panel">
+        <h3>% เปลี่ยนแปลงแต่ละงวด (ทั้งพอร์ต)</h3>
+        <div class="chartbox"><canvas id="chBar"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>มูลค่าแยกตามประเภท</h3>
+        <div class="chartbox"><canvas id="chCat"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-table" style="display:none">
+    <div class="tablewrap" id="bigTable"></div>
+  </div>
+
+  <div id="tab-settings" style="display:none">
+    <div class="panel settings-sec">
+      <h3>💰 Cash Flow ต่อปี (ประมาณการรายรับจากพอร์ต)</h3>
+      <div class="hint" style="margin-bottom:12px">กำหนดฐานคำนวณ + อัตรา % ต่อปี — หัก "ยอดหักฐาน" ออกก่อนคูณอัตรา (เช่น K PLUS − 120,000 × 4%)</div>
+      <div id="cfConfigBox"></div>
+    </div>
+    <div class="panel settings-sec">
+      <h3>📈 Expected Return ต่อปี (% ตามประเภทสินทรัพย์)</h3>
+      <div id="expConfigBox" style="margin-top:10px"></div>
+    </div>
+    <div class="panel settings-sec">
+      <h3>🗂 บัญชี / รายการในพอร์ต</h3>
+      <div class="hint" style="margin-bottom:12px">ลบรายการจะลบข้อมูลย้อนหลังของรายการนั้นทั้งหมด — เพิ่มรายการใหม่ได้จากหน้าต่าง "อัปเดตพอร์ต" เช่นกัน</div>
+      <div id="accManager"></div>
+    </div>
+    <div class="panel settings-sec">
+      <h3>☁️ ซิงก์ข้ามเครื่อง (ผ่าน GitHub — เข้ารหัสก่อนอัพเสมอ)</h3>
+      <div id="syncBox"></div>
+    </div>
+    <div class="panel settings-sec">
+      <h3>⚠️ ข้อมูล</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="exportCSV()">ส่งออก CSV (เปิดใน Excel ได้)</button>
+        <button class="btn danger" onclick="resetData()">รีเซ็ตกลับข้อมูลตั้งต้นจาก Port.xlsx</button>
+      </div>
+    </div>
+  </div>
+
+  <footer id="footNote">ข้อมูลถูกเก็บในเครื่อง + ซิงก์ขึ้น Google Drive อัตโนมัติเมื่อเปิดผ่านลิงก์เว็บ — กด "สำรองข้อมูล" เป็นระยะเพื่อเก็บไฟล์ JSON ไว้กันหาย</footer>
+</div>
+
+<!-- editor modal -->
+<div class="overlay" id="editorOverlay">
+  <div class="modal">
+    <h2 id="editorTitle">อัปเดตพอร์ต</h2>
+    <div class="mrow">
+      <div class="field"><label>วันที่</label><input type="date" id="edDate"></div>
+      <div class="field"><label>เรท USD→THB</label>
+        <div class="fxline">
+          <input class="num" style="width:110px" id="edFx" inputmode="decimal">
+          <button class="btn small" id="btnFx" onclick="fetchFx()">🌐 ดึงเรทล่าสุด</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint" style="margin-bottom:14px">💡 ช่องตัวเลขพิมพ์สูตรได้เหมือน Excel เช่น <b>96390+9971</b> หรือ <b>5*63170+3*60000</b> — ช่อง USD จะถูกคูณเรทให้อัตโนมัติ</div>
+    <div id="editorGroups"></div>
+    <div class="modalfoot">
+      <div>รวมทั้งพอร์ต: <span class="bigtotal" id="edTotal">—</span></div>
+      <div class="spacer"></div>
+      <button class="btn danger" id="btnDelSnap" onclick="deleteSnapshot()" style="display:none">ลบงวดนี้</button>
+      <button class="btn" onclick="closeEditor()">ยกเลิก</button>
+      <button class="btn primary" onclick="saveSnapshot()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN gate -->
+<div class="overlay" id="pinGate" style="z-index:100;align-items:center">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div style="font-size:38px;margin-bottom:10px">🔐</div>
+    <h2 style="margin-bottom:6px">My Port</h2>
+    <div class="hint" style="margin-bottom:16px">ใส่ PIN เพื่อปลดล็อคข้อมูลพอร์ต (ครั้งแรกของเครื่องนี้)</div>
+    <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"
+      style="width:100%;text-align:center;font-size:22px;letter-spacing:8px;margin-bottom:8px"
+      onkeydown="if(event.key==='Enter')unlockSeed()">
+    <div id="pinErr" class="hint" style="color:var(--red);min-height:16px;margin-bottom:10px"></div>
+    <button class="btn primary" style="width:100%;justify-content:center" onclick="unlockSeed()">ปลดล็อค</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= DATA MODEL ================= */
+const CATS = [
+  {id:'saving', name:'เงินฝาก (Saving)', color:'#38bdf8'},
+  {id:'fund',   name:'กองทุน (Fund)',    color:'#818cf8'},
+  {id:'bond',   name:'ตราสารหนี้ (Bond)', color:'#34d399'},
+  {id:'stock',  name:'หุ้น (Stock)',      color:'#fb7185'},
+  {id:'gold',   name:'ทองคำ (Gold)',     color:'#fbbf24'},
+  {id:'crypto', name:'คริปโต (Crypto)',  color:'#c084fc'},
+  {id:'re',     name:'อสังหาฯ',          color:'#94a3b8'},
+];
+const SEED = (typeof window!=="undefined" && window.SEED) || null; // ข้อมูลตั้งต้นแยกไปที่ seed-data.js (local) / seed-data.enc.js (เข้ารหัสสำหรับเว็บ)
+const LS_KEY = 'portTracker_v1';
+/* cloud sync — ทำงานเมื่อโฮสต์บน Google Apps Script */
+const CLOUD = typeof google!=='undefined' && google.script && google.script.run;
+function setSync(mode,msg){
+  const el = document.getElementById('syncChip'); if(!el) return;
+  el.className = 'pill ' + (mode==='ok'?'sync-ok':mode==='busy'?'sync-busy':mode==='err'?'sync-err':'');
+  el.textContent = msg;
+}
+function cloudLoad(){
+  if(!CLOUD) return;
+  setSync('busy','⏳ กำลังโหลดข้อมูลจาก Google Drive…');
+  google.script.run.withSuccessHandler(txt=>{
+    if(txt){
+      try{
+        const s = JSON.parse(txt);
+        if(s && s.snapshots){ state = s; localStorage.setItem(LS_KEY, txt); renderAll(); }
+      }catch(e){}
+      setSync('ok','☁️ ซิงก์กับ Google Drive แล้ว');
+    }else{
+      // ยังไม่มีไฟล์บน Drive — อัปโหลดข้อมูลปัจจุบันขึ้นไปครั้งแรก
+      cloudPush();
+    }
+  }).withFailureHandler(()=>setSync('err','⚠️ โหลดจาก Drive ไม่สำเร็จ')).loadData();
+}
+let _pushTimer = null;
+function cloudPush(){
+  if(!CLOUD) return;
+  setSync('busy','⏳ กำลังบันทึกขึ้น Google Drive…');
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(()=>{
+    google.script.run
+      .withSuccessHandler(()=>setSync('ok','☁️ ซิงก์กับ Google Drive แล้ว'))
+      .withFailureHandler(()=>setSync('err','⚠️ บันทึกขึ้น Drive ไม่สำเร็จ — ข้อมูลยังอยู่ในเครื่อง'))
+      .saveData(JSON.stringify(state));
+  }, 800);
+}
+let state = load();
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(LS_KEY)); if(s && s.snapshots) return s; }catch(e){}
+  return null;
+}
+function save(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+  cloudPush();
+  scheduleGhSync();
+}
+function saveS(){ state.settingsUpdatedAt = Date.now(); save(); }
+async function resetData(){
+  if(!confirm('ลบข้อมูลทั้งหมดแล้วกลับไปใช้ข้อมูลตั้งต้นจาก Port.xlsx ?')) return;
+  let seed = SEED;
+  if(!seed && window.SEED_ENC){
+    const pin = (getSyncCfg()||{}).pin || prompt('ใส่ PIN เพื่อถอดรหัสข้อมูลตั้งต้น');
+    if(!pin) return;
+    try{ seed = await decryptJSON(window.SEED_ENC, pin); }catch(e){ toast('PIN ไม่ถูกต้อง'); return; }
+  }
+  if(!seed){ toast('ไม่พบข้อมูลตั้งต้นในเครื่องนี้'); return; }
+  state = JSON.parse(JSON.stringify(seed)); save(); renderAll(); toast('รีเซ็ตแล้ว');
+}
+
+/* ================= CRYPTO (AES-256-GCM + PBKDF2 600k) ================= */
+const _te = new TextEncoder(), _td = new TextDecoder();
+function _b64(buf){ const a=new Uint8Array(buf); let s=''; for(let i=0;i<a.length;i+=0x8000) s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000)); return btoa(s); }
+function _unb64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+async function deriveKey(pin, salt){
+  const km = await crypto.subtle.importKey('raw', _te.encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:600000, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function encryptJSON(obj, pin){
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pin, salt);
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, _te.encode(JSON.stringify(obj)));
+  return {salt:_b64(salt), iv:_b64(iv), ct:_b64(ct)};
+}
+async function decryptJSON(blob, pin){
+  const key = await deriveKey(pin, _unb64(blob.salt));
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:_unb64(blob.iv)}, key, _unb64(blob.ct));
+  return JSON.parse(_td.decode(pt));
+}
+
+/* ================= GITHUB CLOUD SYNC ================= */
+const GH = {owner:'tpnaudit', repo:'port-tracker', path:'data.enc.json', branch:'data'};
+const SYNC_KEY = 'portTrackerSync';
+function getSyncCfg(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)); }catch(e){ return null; } }
+function setSyncCfg(c){ if(c) localStorage.setItem(SYNC_KEY, JSON.stringify(c)); else localStorage.removeItem(SYNC_KEY); }
+function ghHeaders(cfg){ return {'Authorization':'Bearer '+cfg.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28'}; }
+function normState(s){
+  return {accounts:s.accounts, cf:s.cf, exp:s.exp, settingsUpdatedAt:s.settingsUpdatedAt||0,
+    snapshots:[...(s.snapshots||[])].sort((a,b)=>a.date.localeCompare(b.date))};
+}
+function mergeStates(a, b){
+  const map = {};
+  for(const sn of [...(a.snapshots||[]), ...(b.snapshots||[])]){
+    if(!map[sn.date] || (sn.updatedAt||0) > (map[sn.date].updatedAt||0)) map[sn.date] = sn;
+  }
+  const base = (a.settingsUpdatedAt||0) >= (b.settingsUpdatedAt||0) ? a : b;
+  return normState({accounts:base.accounts, cf:base.cf, exp:base.exp,
+    settingsUpdatedAt:base.settingsUpdatedAt||0, snapshots:Object.values(map)});
+}
+async function ghGet(cfg){
+  const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}?ref=${GH.branch}`, {headers:ghHeaders(cfg), cache:'no-store'});
+  if(r.status===404) return {sha:null, data:null};
+  if(!r.ok) throw new Error('GET '+r.status);
+  const j = await r.json();
+  const blob = JSON.parse(atob(j.content.replace(/\n/g,'')));
+  return {sha:j.sha, data: await decryptJSON(blob, cfg.pin)};
+}
+async function ghPut(cfg, obj, sha){
+  const blob = await encryptJSON(obj, cfg.pin);
+  const body = {message:'sync '+new Date().toISOString(), branch:GH.branch, content:btoa(JSON.stringify(blob))};
+  if(sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`, {method:'PUT', headers:ghHeaders(cfg), body:JSON.stringify(body)});
+  if(!r.ok) throw new Error('PUT '+r.status);
+}
+let _syncing = false, _ghTimer = null;
+function scheduleGhSync(){
+  if(!getSyncCfg()) return;
+  clearTimeout(_ghTimer);
+  _ghTimer = setTimeout(()=>ghSyncNow(), 4000);
+}
+async function ghSyncNow(){
+  const cfg = getSyncCfg();
+  if(!state || !cfg || !cfg.token || !cfg.pin || _syncing) return;
+  _syncing = true;
+  setSync('busy','⏳ กำลังซิงก์…');
+  try{
+    for(let attempt=0; attempt<2; attempt++){
+      const {sha, data} = await ghGet(cfg);
+      const merged = data ? mergeStates(state, data) : normState(state);
+      if(JSON.stringify(normState(state)) !== JSON.stringify(merged)){
+        state = merged;
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+        renderAll();
+      }
+      if(!data || JSON.stringify(normState(data)) !== JSON.stringify(merged)){
+        try{ await ghPut(cfg, merged, sha); }
+        catch(e){ if(String(e.message).includes('409') && attempt===0) continue; throw e; }
+      }
+      break;
+    }
+    cfg.lastSync = Date.now(); setSyncCfg(cfg);
+    setSync('ok','☁️ ซิงก์แล้ว '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){
+    setSync('err','⚠️ ซิงก์ไม่สำเร็จ — ข้อมูลยังอยู่ในเครื่อง');
+  }
+  _syncing = false;
+  const box = document.getElementById('syncBox');
+  if(box && document.getElementById('tab-settings').style.display!=='none') renderSyncBox();
+}
+document.addEventListener('visibilitychange', ()=>{
+  const cfg = getSyncCfg();
+  if(!document.hidden && cfg && Date.now()-(cfg.lastSync||0) > 60000) ghSyncNow();
+});
+
+/* ================= CALC ================= */
+function evalExpr(s){
+  if(s===undefined || s===null) return 0;
+  s = String(s).trim(); if(s==='') return 0;
+  if(!/^[0-9+\-*/(). ]+$/.test(s)) return NaN;
+  try{ const v = Function('"use strict";return('+s+')')(); return (typeof v==='number' && isFinite(v)) ? v : NaN; }catch(e){ return NaN; }
+}
+function cellVal(snap, accId){
+  const c = snap.v[accId]; if(!c) return 0;
+  const t = evalExpr(c.t), u = evalExpr(c.u);
+  if(isNaN(t)||isNaN(u)) return NaN;
+  return t + u*(snap.fx||0);
+}
+function catTotal(snap, catId){
+  return state.accounts.filter(a=>a.c===catId).reduce((s,a)=>s+(cellVal(snap,a.id)||0), 0);
+}
+function snapTotals(snap){
+  const byCat = {}; let total = 0;
+  for(const c of CATS){ byCat[c.id] = catTotal(snap, c.id); total += byCat[c.id]; }
+  return {byCat, total, exCrypto: total-byCat.crypto, exBoth: total-byCat.crypto-byCat.re};
+}
+function cfBaseVal(snap, base){
+  const [kind,id] = base.split(':');
+  return kind==='cat' ? catTotal(snap,id) : cellVal(snap,id)||0;
+}
+function cfTotal(snap){
+  return state.cf.reduce((s,it)=> s + Math.max(0, cfBaseVal(snap,it.base)-(it.offset||0))*(it.rate/100), 0);
+}
+function expTotal(snap){
+  const t = snapTotals(snap).byCat;
+  return CATS.reduce((s,c)=> s + t[c.id]*((state.exp[c.id]||0)/100), 0);
+}
+function sortedSnaps(){ return state.snapshots.filter(s=>!s.deleted).sort((a,b)=>a.date.localeCompare(b.date)); }
+
+/* ================= FORMAT ================= */
+const nf = new Intl.NumberFormat('th-TH',{maximumFractionDigits:0});
+function fmt(n){ return isNaN(n) ? '⚠️' : nf.format(Math.round(n)); }
+function fmtPct(x,d=1){ return (x==null||!isFinite(x)) ? '—' : ((x>0?'+':'')+(x*100).toFixed(d)+'%'); }
+function thDate(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  const mn = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${d} ${mn[m-1]} ${String(y+543).slice(-2)}`;
+}
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.style.display='block';
+  clearTimeout(t._h); t._h = setTimeout(()=>t.style.display='none', 2600);
+}
+
+/* ================= TABS ================= */
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+  for(const k of ['overview','table','settings']) document.getElementById('tab-'+k).style.display = k===id?'':'none';
+  if(id==='overview') renderOverview();
+  if(id==='table') renderTable();
+  if(id==='settings') renderSettings();
+}
+
+/* ================= OVERVIEW ================= */
+let charts = {};
+if(typeof Chart!=='undefined'){ Chart.defaults.animation = false; }
+function mkChart(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  if(typeof Chart==='undefined') return;
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+function renderOverview(){
+  const snaps = sortedSnaps();
+  if(!snaps.length) return;
+  const last = snaps[snaps.length-1], prev = snaps.length>1 ? snaps[snaps.length-2] : null;
+  const T = snapTotals(last), Tp = prev ? snapTotals(prev) : null;
+  const cf = cfTotal(last), exp = expTotal(last);
+  const mom = Tp ? (T.total-Tp.total)/Tp.total : null;
+  // YTD: vs last snapshot of previous year, else first of this year
+  const yr = last.date.slice(0,4);
+  let baseSnap = [...snaps].reverse().find(s=>s.date.slice(0,4)<yr) || snaps.find(s=>s.date.slice(0,4)===yr);
+  const ytd = (baseSnap && baseSnap!==last) ? (T.total/snapTotals(baseSnap).total-1) : null;
+  document.getElementById('lastUpdated').textContent = `อัปเดตล่าสุด ${thDate(last.date)} · เรท USD ${last.fx} บาท · ${snaps.length} งวด`;
+  const cards = [
+    {l:'มูลค่าพอร์ตรวม', v:'฿'+fmt(T.total), d: mom!=null?`${fmtPct(mom)} (${(T.total-Tp.total>=0?'+':'')+fmt(T.total-Tp.total)}) จากงวดก่อน`:'', cls: mom>=0?'pos':'neg'},
+    {l:'ผลตอบแทน YTD '+(Number(yr)+543), v:fmtPct(ytd), d: baseSnap&&baseSnap!==last?('เทียบ '+thDate(baseSnap.date)):'', cls: ytd>=0?'pos':'neg'},
+    {l:'Cash Flow คาดหวัง/ปี', v:'฿'+fmt(cf), d:'คิดเป็น '+ (T.total?((cf/T.total*100).toFixed(2)+'% ของพอร์ต'):''), cls:'pos'},
+    {l:'Expected Return/ปี', v:'฿'+fmt(exp), d:'คิดเป็น '+ (T.total?((exp/T.total*100).toFixed(2)+'% ของพอร์ต'):''), cls:'pos'},
+  ];
+  document.getElementById('statCards').innerHTML = cards.map(c=>
+    `<div class="card"><div class="lbl">${c.l}</div><div class="val">${c.v}</div><div class="delta ${c.cls}">${c.d}</div></div>`).join('');
+
+  const labels = snaps.map(s=>thDate(s.date));
+  const totals = snaps.map(s=>snapTotals(s));
+  const gridC = 'rgba(120,130,180,.12)', tickC = '#8b93b8';
+  const commonOpts = {responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#c3cbe8',boxWidth:12,font:{family:'Prompt'}}}},
+    scales:{x:{ticks:{color:tickC,font:{family:'Prompt',size:10}},grid:{color:gridC}},
+            y:{ticks:{color:tickC,font:{family:'Prompt',size:10},callback:v=>nf.format(v)},grid:{color:gridC}}}};
+
+  const ds = [{label:'ทั้งพอร์ต',data:totals.map(t=>t.total),borderColor:'#6d8bff',backgroundColor:'rgba(109,139,255,.15)',fill:true,tension:.3,pointRadius:3}];
+  if(document.getElementById('ckExCrypto').checked)
+    ds.push({label:'ไม่รวม Crypto',data:totals.map(t=>t.exCrypto),borderColor:'#c084fc',tension:.3,pointRadius:2,borderDash:[6,4]});
+  if(document.getElementById('ckExRe').checked)
+    ds.push({label:'ไม่รวม Crypto+อสังหาฯ',data:totals.map(t=>t.exBoth),borderColor:'#34d399',tension:.3,pointRadius:2,borderDash:[3,3]});
+  mkChart('chLine',{type:'line',data:{labels,datasets:ds},options:commonOpts});
+
+  mkChart('chDonut',{type:'doughnut',
+    data:{labels:CATS.map(c=>c.name),datasets:[{data:CATS.map(c=>T.byCat[c.id]),backgroundColor:CATS.map(c=>c.color),borderColor:'#151a30',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{color:'#c3cbe8',boxWidth:11,font:{family:'Prompt',size:11.5},
+        generateLabels(ch){const d=ch.data;const tot=d.datasets[0].data.reduce((a,b)=>a+b,0);
+          return d.labels.map((l,i)=>({text:`${l}  ${(d.datasets[0].data[i]/tot*100).toFixed(1)}%`,fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:'transparent',index:i}));}}},
+      tooltip:{callbacks:{label:c=>' ฿'+nf.format(c.raw)}}}}});
+
+  const momData = snaps.map((s,i)=> i===0?null:(totals[i].total-totals[i-1].total)/totals[i-1].total*100);
+  mkChart('chBar',{type:'bar',
+    data:{labels,datasets:[{label:'% เปลี่ยนแปลง',data:momData,backgroundColor:momData.map(v=>v>=0?'rgba(52,211,153,.75)':'rgba(251,113,133,.75)'),borderRadius:5}]},
+    options:{...commonOpts,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+(c.raw>=0?'+':'')+c.raw?.toFixed(2)+'%'}}}}});
+
+  mkChart('chCat',{type:'line',
+    data:{labels,datasets:CATS.filter(c=>c.id!=='re').map(c=>({label:c.name,data:totals.map(t=>t.byCat[c.id]),borderColor:c.color,tension:.3,pointRadius:0,borderWidth:2}))},
+    options:commonOpts});
+}
+
+/* ================= TABLE ================= */
+function renderTable(){
+  const snaps = sortedSnaps();
+  const cols = snaps.map((s,i)=>`<th>${thDate(s.date)}<div class="colbtns"><button class="iconbtn" title="แก้ไข" onclick="openEditor(${i})">✎</button></div></th>`).join('');
+  let html = `<table><thead><tr><th class="name">รายการ</th>${cols}</tr></thead><tbody>`;
+  const totals = snaps.map(s=>snapTotals(s));
+  for(const cat of CATS){
+    const accs = state.accounts.filter(a=>a.c===cat.id);
+    html += `<tr class="cat"><td class="name"><span class="dot" style="background:${cat.color}"></span>${cat.name}</td>`+
+      snaps.map((s,i)=>`<td>${fmt(totals[i].byCat[cat.id])}</td>`).join('')+`</tr>`;
+    if(accs.length>1 || (accs.length===1 && accs[0].id!==cat.id)){
+      for(const a of accs){
+        const has = snaps.some(s=>s.v[a.id]);
+        if(!has) continue;
+        html += `<tr class="sub"><td class="name" style="padding-left:30px">${a.n}</td>`+
+          snaps.map(s=>{const v=cellVal(s,a.id);return `<td>${s.v[a.id]?fmt(v):'<span class="mut">–</span>'}</td>`}).join('')+`</tr>`;
+      }
+    }
+  }
+  html += `<tr class="total"><td class="name">รวมทั้งพอร์ต</td>${totals.map(t=>`<td>${fmt(t.total)}</td>`).join('')}</tr>`;
+  html += `<tr class="pct"><td class="name">% เปลี่ยนแปลง</td>${totals.map((t,i)=>`<td class="${i>0?((t.total>=totals[i-1].total)?'pos':'neg'):''}">${i===0?'—':fmtPct((t.total-totals[i-1].total)/totals[i-1].total)}</td>`).join('')}</tr>`;
+  html += `<tr class="sub"><td class="name">ไม่รวม Crypto</td>${totals.map(t=>`<td>${fmt(t.exCrypto)}</td>`).join('')}</tr>`;
+  html += `<tr class="sub"><td class="name">ไม่รวม Crypto+อสังหาฯ</td>${totals.map(t=>`<td>${fmt(t.exBoth)}</td>`).join('')}</tr>`;
+  html += `<tr class="pct"><td class="name">Cash Flow/ปี</td>${snaps.map(s=>`<td>${fmt(cfTotal(s))}</td>`).join('')}</tr>`;
+  html += `<tr class="pct"><td class="name">% CF Return</td>${snaps.map((s,i)=>`<td>${(cfTotal(s)/totals[i].total*100).toFixed(2)}%</td>`).join('')}</tr>`;
+  html += `<tr class="pct"><td class="name">Expected Return/ปี</td>${snaps.map(s=>`<td>${fmt(expTotal(s))}</td>`).join('')}</tr>`;
+  html += `<tr class="pct"><td class="name">% Expected Return</td>${snaps.map((s,i)=>`<td>${(expTotal(s)/totals[i].total*100).toFixed(2)}%</td>`).join('')}</tr>`;
+  html += `</tbody></table>`;
+  const box = document.getElementById('bigTable');
+  box.innerHTML = html;
+  box.scrollLeft = box.scrollWidth;
+}
+
+/* ================= SETTINGS ================= */
+function baseOptions(sel){
+  let o = CATS.map(c=>`<option value="cat:${c.id}" ${sel==='cat:'+c.id?'selected':''}>ทั้งกลุ่ม: ${c.name}</option>`).join('');
+  o += state.accounts.map(a=>{const cat=CATS.find(c=>c.id===a.c);return `<option value="acc:${a.id}" ${sel==='acc:'+a.id?'selected':''}>บัญชี: ${a.n} (${cat.name})</option>`}).join('');
+  return o;
+}
+function renderSettings(){
+  document.getElementById('cfConfigBox').innerHTML =
+    `<div class="set-grid" style="color:var(--muted);font-size:11.5px"><div>ฐานคำนวณ</div><div>อัตรา %/ปี</div><div>ยอดหักฐาน (บาท)</div></div>`+
+    state.cf.map((it,i)=>`<div class="set-grid">
+      <select onchange="state.cf[${i}].base=this.value;saveS();renderSettings()">${baseOptions(it.base)}</select>
+      <input class="num" style="width:100%" value="${it.rate}" onchange="state.cf[${i}].rate=parseFloat(this.value)||0;saveS()">
+      <div style="display:flex;gap:6px"><input class="num" style="width:100%" value="${it.offset||0}" onchange="state.cf[${i}].offset=parseFloat(this.value)||0;saveS()">
+      <button class="iconbtn" onclick="state.cf.splice(${i},1);saveS();renderSettings()" title="ลบ">✕</button></div>
+    </div>`).join('')+
+    `<button class="addacc" onclick="state.cf.push({label:'',base:'cat:saving',rate:0,offset:0});saveS();renderSettings()">＋ เพิ่มแหล่ง Cash Flow</button>`;
+
+  document.getElementById('expConfigBox').innerHTML = CATS.map(c=>`<div class="set-grid">
+      <div><span class="dot" style="background:${c.color}"></span>${c.name}</div>
+      <input class="num" style="width:100%" value="${state.exp[c.id]||0}" onchange="state.exp['${c.id}']=parseFloat(this.value)||0;saveS()">
+      <div class="mut" style="font-size:11.5px">%/ปี</div></div>`).join('');
+
+  document.getElementById('accManager').innerHTML = CATS.map(c=>{
+    const accs = state.accounts.filter(a=>a.c===c.id);
+    return `<div style="margin-bottom:13px"><div style="margin-bottom:7px"><span class="dot" style="background:${c.color}"></span>${c.name}</div>
+      <div class="acclist">${accs.map(a=>`<span class="accpill">${a.n}<button title="ลบ" onclick="deleteAccount('${a.id}')">✕</button></span>`).join('')}
+      <button class="btn small" onclick="addAccount('${c.id}')">＋ เพิ่ม</button></div></div>`;
+  }).join('');
+  renderSyncBox();
+}
+function renderSyncBox(){
+  const box = document.getElementById('syncBox'); if(!box) return;
+  const cfg = getSyncCfg();
+  if(cfg && cfg.token){
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="pill sync-ok">✓ เชื่อมต่อแล้ว</span>
+        <span class="mut" style="font-size:12px">ซิงก์ล่าสุด: ${cfg.lastSync?new Date(cfg.lastSync).toLocaleString('th-TH'):'—'}</span>
+        <div class="spacer"></div>
+        <button class="btn small" onclick="ghSyncNow()">🔄 ซิงก์เดี๋ยวนี้</button>
+        <button class="btn small danger" onclick="if(confirm('ยกเลิกการซิงก์เครื่องนี้? (ข้อมูลในเครื่องยังอยู่)')){setSyncCfg(null);renderSyncBox()}">ยกเลิกการเชื่อมต่อ</button>
+      </div>
+      <div class="hint" style="margin-top:8px">ข้อมูลถูกเข้ารหัส AES-256 ด้วย PIN ก่อนอัพขึ้น GitHub ทุกครั้ง — บน GitHub อ่านไม่ออก</div>`;
+  }else{
+    box.innerHTML = `
+      <div class="hint" style="margin-bottom:10px">
+        ทำครั้งเดียวต่อเครื่อง: สร้าง Token ที่
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:var(--accent)">github.com/settings/personal-access-tokens/new</a><br>
+        1) Token name: อะไรก็ได้ · Expiration: 1 ปี &nbsp;2) Repository access → <b>Only select repositories</b> → เลือก <b>port-tracker</b><br>
+        3) Permissions → Repository permissions → <b>Contents = Read and write</b> &nbsp;4) Generate token แล้วคัดลอกมาวางที่นี่</div>
+      <div class="mrow">
+        <div class="field" style="flex:1;min-width:220px"><label>GitHub Token (github_pat_…)</label>
+          <input id="syncToken" placeholder="github_pat_xxxx" autocomplete="off"></div>
+        <div class="field"><label>PIN (ตัวเดียวกับตอนปลดล็อค)</label>
+          <input id="syncPin" type="password" inputmode="numeric" style="width:110px" value="${(cfg&&cfg.pin)||''}"></div>
+        <button class="btn primary" onclick="connectSync()">เชื่อมต่อ</button>
+      </div>`;
+  }
+}
+async function connectSync(){
+  const token = document.getElementById('syncToken').value.trim();
+  const pin = document.getElementById('syncPin').value.trim();
+  if(!token || !pin){ toast('กรอก Token และ PIN ก่อนนะ'); return; }
+  setSyncCfg({token, pin, lastSync:0});
+  toast('กำลังทดสอบการเชื่อมต่อ…');
+  await ghSyncNow();
+  const cfg = getSyncCfg();
+  if(cfg.lastSync){ toast('เชื่อมต่อสำเร็จ ✓ ข้อมูลซิงก์แล้ว'); }
+  else { setSyncCfg(null); toast('เชื่อมต่อไม่สำเร็จ — เช็ค Token/PIN แล้วลองใหม่'); }
+  renderSyncBox();
+}
+function deleteAccount(id){
+  const a = state.accounts.find(x=>x.id===id);
+  if(!confirm(`ลบ "${a.n}" และข้อมูลย้อนหลังทั้งหมดของรายการนี้?`)) return;
+  state.accounts = state.accounts.filter(x=>x.id!==id);
+  state.snapshots.forEach(s=>{ if(s.v) delete s.v[id]; });
+  state.cf = state.cf.filter(it=>it.base!=='acc:'+id);
+  state.snapshots.forEach(s=>{ if(s.v && s.v[id]===undefined) s.updatedAt=Date.now(); });
+  saveS(); renderSettings(); toast('ลบแล้ว');
+}
+function addAccount(catId, name){
+  name = name || prompt('ชื่อบัญชี/รายการใหม่'); if(!name) return null;
+  const id = catId+'-'+Date.now().toString(36);
+  state.accounts.push({id, n:name, c:catId}); saveS();
+  if(document.getElementById('tab-settings').style.display!=='none') renderSettings();
+  return id;
+}
+
+/* ================= EDITOR ================= */
+let editIndex = null; // index into sortedSnaps, null = new
+let draft = null;
+function openEditor(idx){
+  const snaps = sortedSnaps();
+  editIndex = idx;
+  if(idx===null){
+    const last = snaps[snaps.length-1];
+    draft = {date: new Date().toISOString().slice(0,10), fx: last?last.fx:33,
+      v: last ? JSON.parse(JSON.stringify(last.v)) : {}};
+    document.getElementById('editorTitle').textContent = 'อัปเดตพอร์ต (ก่อนแก้ = ค่าจากงวดล่าสุด)';
+    document.getElementById('btnDelSnap').style.display = 'none';
+  }else{
+    draft = JSON.parse(JSON.stringify(snaps[idx]));
+    document.getElementById('editorTitle').textContent = 'แก้ไขงวด '+thDate(draft.date);
+    document.getElementById('btnDelSnap').style.display = '';
+  }
+  document.getElementById('edDate').value = draft.date;
+  document.getElementById('edFx').value = draft.fx;
+  renderEditorGroups();
+  document.getElementById('editorOverlay').classList.add('open');
+}
+function closeEditor(){ document.getElementById('editorOverlay').classList.remove('open'); }
+function renderEditorGroups(){
+  const box = document.getElementById('editorGroups');
+  box.innerHTML = CATS.map(cat=>{
+    const accs = state.accounts.filter(a=>a.c===cat.id);
+    return `<div class="groupbox">
+      <div class="grouphead"><span class="dot" style="background:${cat.color}"></span><b>${cat.name}</b>
+        <span class="gt" id="gt-${cat.id}"></span></div>
+      <div class="acc-grid acc-legend" style="color:var(--muted);font-size:11px;margin-bottom:4px"><div></div><div>บาท (พิมพ์สูตรได้)</div><div>USD (คูณเรทอัตโนมัติ)</div><div style="text-align:right">รวม (บาท)</div><div></div></div>
+      ${accs.map(a=>{
+        const c = draft.v[a.id]||{};
+        return `<div class="acc-grid">
+          <div>${a.n}</div>
+          <input data-acc="${a.id}" data-f="t" value="${c.t??''}" placeholder="บาท" inputmode="text" oninput="onCellInput(this)">
+          <input data-acc="${a.id}" data-f="u" value="${c.u??''}" placeholder="USD" inputmode="text" oninput="onCellInput(this)">
+          <div class="cv" id="cv-${a.id}"></div>
+          <button class="iconbtn" title="ล้างค่า" onclick="clearCell('${a.id}')">✕</button>
+        </div>`;
+      }).join('')}
+      <button class="addacc" onclick="editorAddAccount('${cat.id}')">＋ เพิ่มรายการใน ${cat.name}</button>
+    </div>`;
+  }).join('');
+  recalcEditor();
+}
+function onCellInput(el){
+  const acc = el.dataset.acc, f = el.dataset.f;
+  if(!draft.v[acc]) draft.v[acc] = {};
+  if(el.value.trim()==='') delete draft.v[acc][f]; else draft.v[acc][f] = el.value;
+  if(!draft.v[acc].t && !draft.v[acc].u) delete draft.v[acc];
+  el.classList.toggle('err', isNaN(evalExpr(el.value)));
+  recalcEditor();
+}
+function clearCell(accId){
+  delete draft.v[accId];
+  document.querySelectorAll(`input[data-acc="${accId}"]`).forEach(i=>{i.value='';i.classList.remove('err')});
+  recalcEditor();
+}
+function editorAddAccount(catId){
+  const id = addAccount(catId);
+  if(id) renderEditorGroups();
+}
+function recalcEditor(){
+  draft.fx = parseFloat(document.getElementById('edFx').value)||0;
+  let total = 0;
+  for(const cat of CATS){
+    let ct = 0;
+    for(const a of state.accounts.filter(x=>x.c===cat.id)){
+      const v = cellVal(draft, a.id);
+      const el = document.getElementById('cv-'+a.id);
+      if(el) el.textContent = draft.v[a.id] ? fmt(v) : '';
+      ct += v||0;
+    }
+    const g = document.getElementById('gt-'+cat.id);
+    if(g) g.textContent = fmt(ct);
+    total += ct;
+  }
+  document.getElementById('edTotal').textContent = '฿'+fmt(total);
+}
+document.getElementById('edFx').addEventListener('input', recalcEditor);
+async function fetchFx(){
+  const btn = document.getElementById('btnFx');
+  btn.disabled = true; btn.textContent = '⏳ กำลังดึง…';
+  try{
+    let rate = null;
+    try{
+      const r = await fetch('https://open.er-api.com/v6/latest/USD'); const j = await r.json();
+      rate = j?.rates?.THB;
+    }catch(e){}
+    if(!rate){
+      try{
+        const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=THB'); const j = await r.json();
+        rate = j?.rates?.THB;
+      }catch(e){}
+    }
+    if(!rate && CLOUD){
+      rate = await new Promise(res=>google.script.run.withSuccessHandler(res).withFailureHandler(()=>res(null)).getFxRate());
+    }
+    if(rate){ document.getElementById('edFx').value = Math.round(rate*100)/100; recalcEditor(); toast('เรทล่าสุด: '+rate.toFixed(2)+' บาท/USD'); }
+    else toast('ดึงเรทไม่สำเร็จ — กรอกเองได้เลย');
+  }catch(e){ toast('ดึงเรทไม่สำเร็จ — กรอกเองได้เลย'); }
+  btn.disabled = false; btn.textContent = '🌐 ดึงเรทล่าสุด';
+}
+function saveSnapshot(){
+  const date = document.getElementById('edDate').value;
+  if(!date){ toast('กรุณาเลือกวันที่'); return; }
+  // validate expressions
+  for(const [acc,c] of Object.entries(draft.v)){
+    if(isNaN(evalExpr(c.t)) || isNaN(evalExpr(c.u))){ toast('มีสูตรที่ผิด (ช่องสีแดง) — แก้ก่อนบันทึกนะ'); return; }
+  }
+  draft.date = date;
+  draft.fx = parseFloat(document.getElementById('edFx').value)||0;
+  draft.updatedAt = Date.now();
+  const snaps = sortedSnaps();
+  const orig = editIndex!==null ? snaps[editIndex] : null;
+  const dup = state.snapshots.find(s=>s.date===date && !s.deleted && s!==orig);
+  if(dup && !confirm('มีงวดวันที่นี้อยู่แล้ว — บันทึกทับ?')) return;
+  if(orig){
+    state.snapshots = state.snapshots.filter(s=>s!==orig);
+    if(orig.date!==date) state.snapshots.push({date:orig.date, deleted:true, updatedAt:Date.now()});
+  }
+  state.snapshots = state.snapshots.filter(s=>s.date!==date); // ล้างงวดซ้ำ/tombstone ที่วันที่เดียวกัน
+  state.snapshots.push(draft);
+  save(); closeEditor(); renderAll(); toast('บันทึกแล้ว ✓');
+}
+function deleteSnapshot(){
+  if(editIndex===null) return;
+  const snaps = sortedSnaps();
+  const orig = snaps[editIndex];
+  if(!confirm('ลบงวด '+thDate(orig.date)+' ?')) return;
+  const i = state.snapshots.indexOf(orig);
+  state.snapshots[i] = {date:orig.date, deleted:true, updatedAt:Date.now()};
+  save(); closeEditor(); renderAll(); toast('ลบงวดแล้ว');
+}
+
+/* ================= EXPORT / IMPORT ================= */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state,null,1)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'port-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  toast('ดาวน์โหลดไฟล์สำรองแล้ว');
+}
+function importJSON(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const s = JSON.parse(rd.result);
+      if(!s.snapshots || !s.accounts) throw 0;
+      state = s; save(); renderAll(); toast('นำเข้าข้อมูลแล้ว ✓');
+    }catch(e){ toast('ไฟล์ไม่ถูกต้อง'); }
+  };
+  rd.readAsText(f); ev.target.value='';
+}
+function exportCSV(){
+  const snaps = sortedSnaps();
+  let rows = [['รายการ',...snaps.map(s=>s.date)]];
+  for(const cat of CATS){
+    rows.push([cat.name,...snaps.map(s=>Math.round(catTotal(s,cat.id)))]);
+    for(const a of state.accounts.filter(x=>x.c===cat.id)){
+      if(!snaps.some(s=>s.v[a.id])) continue;
+      rows.push(['  '+a.n,...snaps.map(s=>s.v[a.id]?Math.round(cellVal(s,a.id)):'')]);
+    }
+  }
+  rows.push(['Total',...snaps.map(s=>Math.round(snapTotals(s).total))]);
+  rows.push(['CF/ปี',...snaps.map(s=>Math.round(cfTotal(s)))]);
+  const csv = '﻿'+rows.map(r=>r.join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'port-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+
+/* ================= INIT ================= */
+function renderAll(){ renderOverview(); renderTable(); renderSettings(); }
+document.getElementById('editorOverlay').addEventListener('click', e=>{ if(e.target.id==='editorOverlay') closeEditor(); });
+async function unlockSeed(){
+  const pin = document.getElementById('pinInput').value.trim();
+  if(!pin) return;
+  const err = document.getElementById('pinErr');
+  err.textContent = '⏳ กำลังถอดรหัส…';
+  try{
+    state = await decryptJSON(window.SEED_ENC, pin);
+    const cfg = getSyncCfg()||{}; cfg.pin = pin; setSyncCfg({token:cfg.token||'', pin, lastSync:cfg.lastSync||0});
+    document.getElementById('pinGate').classList.remove('open');
+    finishInit();
+  }catch(e){
+    err.textContent = 'PIN ไม่ถูกต้อง ลองใหม่อีกครั้ง';
+    document.getElementById('pinInput').value = '';
+  }
+}
+function finishInit(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+  renderAll();
+  cloudLoad();     // โหมด Google Apps Script (ถ้ามี)
+  ghSyncNow();     // โหมด GitHub sync (ถ้าตั้งค่าไว้)
+}
+function boot(){
+  const forceGate = location.search.includes('gate=1');
+  if(state && !forceGate){ finishInit(); return; }
+  if(SEED && !forceGate){ state = JSON.parse(JSON.stringify(SEED)); finishInit(); return; }
+  if(window.SEED_ENC){
+    document.getElementById('pinGate').classList.add('open');
+    setTimeout(()=>document.getElementById('pinInput').focus(), 100);
+    return;
+  }
+  state = {accounts:[], snapshots:[], cf:[], exp:{}};
+  finishInit();
+}
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# ข้อมูลพอร์ตดิบ — ห้าม commit เด็ดขาด
+seed-data.js
+seed.json
+data.enc.json
+
+# ไฟล์ทางเลือก Apps Script (ใช้เฉพาะ local)
+Code.gs
+วิธีติดตั้งบนมือถือ.md
