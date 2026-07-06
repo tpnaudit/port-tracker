@@ -860,11 +860,22 @@ function finishInit(){
   cloudLoad();     // โหมด Google Apps Script (ถ้ามี)
   ghSyncNow();     // โหมด GitHub sync (ถ้าตั้งค่าไว้)
 }
-function boot(){
+async function boot(){
+  // ลิงก์ตั้งค่าอัตโนมัติ: เปิด URL ที่ลงท้าย #setup=<token>.<pin> ครั้งเดียวต่อเครื่อง
+  const m = location.hash.match(/^#setup=([A-Za-z0-9_]+)\.([0-9]+)$/);
+  if(m){
+    setSyncCfg({token:m[1], pin:m[2], lastSync:0});
+    history.replaceState(null, '', location.pathname+location.search);
+  }
   const forceGate = location.search.includes('gate=1');
   if(state && !forceGate){ finishInit(); return; }
   if(SEED && !forceGate){ state = JSON.parse(JSON.stringify(SEED)); finishInit(); return; }
   if(window.SEED_ENC){
+    const cfg = getSyncCfg();
+    if(cfg && cfg.pin && !forceGate){
+      // มี PIN จากลิงก์ตั้งค่าแล้ว — ปลดล็อคให้อัตโนมัติ
+      try{ state = await decryptJSON(window.SEED_ENC, cfg.pin); finishInit(); if(m) toast('ตั้งค่าซิงก์จากลิงก์สำเร็จ ✓'); return; }catch(e){}
+    }
     document.getElementById('pinGate').classList.add('open');
     setTimeout(()=>document.getElementById('pinInput').focus(), 100);
     return;
