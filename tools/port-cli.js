@@ -139,6 +139,16 @@ function applyPatch(s, p){
       console.log('Projects:', Object.values(data.projects||{}).filter(p=>!p.deleted).map(p=>p.name).join(', ')||'—');
       return;
     }
+    if(cmd==='make-sync-token'){
+      // สร้าง sync-token.enc.js: fine-grained PAT (Contents RW เฉพาะ repo port-tracker) เข้ารหัสด้วย PIN
+      const tok = process.env.PORT_SYNC_TOKEN; if(!tok) throw new Error('ตั้ง env PORT_SYNC_TOKEN ก่อน');
+      const r = await fetch(URL_(C.GH.path)+'?ref='+C.GH.branch, {headers:H(tok)});
+      if(!r.ok) throw new Error('token ใช้อ่าน repo ไม่ได้ ('+r.status+')');
+      const blob = await C.encryptJSON({token:tok}, c.pin);
+      fs.writeFileSync(path.join(__dirname,'..','sync-token.enc.js'), 'window.SYNC_ENC = '+JSON.stringify(blob)+';\n');
+      console.log('สร้าง sync-token.enc.js แล้ว (token อ่าน data2 ได้)');
+      return;
+    }
     if(cmd==='apply'){
       const patch = JSON.parse(fs.readFileSync(opt('patch'),'utf8'));
       const {data, sha, from} = await load(c);

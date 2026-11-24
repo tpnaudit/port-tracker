@@ -4,13 +4,13 @@
 'use strict';
 
 const CATS = [
-  {id:'saving', name:'เงินฝาก (Saving)', color:'#38bdf8'},
-  {id:'fund',   name:'กองทุน (Fund)',    color:'#818cf8'},
-  {id:'bond',   name:'ตราสารหนี้ (Bond)', color:'#34d399'},
-  {id:'stock',  name:'หุ้น (Stock)',      color:'#fb7185'},
-  {id:'gold',   name:'ทองคำ (Gold)',     color:'#fbbf24'},
-  {id:'crypto', name:'คริปโต (Crypto)',  color:'#c084fc'},
-  {id:'re',     name:'อสังหาฯ',          color:'#94a3b8'},
+  {id:'saving', name:'เงินฝาก (Saving)', color:'#3b82b8'},
+  {id:'fund',   name:'กองทุน (Fund)',    color:'#6b5fb5'},
+  {id:'bond',   name:'ตราสารหนี้ (Bond)', color:'#0d7a6b'},
+  {id:'stock',  name:'หุ้น (Stock)',      color:'#d9534f'},
+  {id:'gold',   name:'ทองคำ (Gold)',     color:'#d99a1e'},
+  {id:'crypto', name:'คริปโต (Crypto)',  color:'#9b4dca'},
+  {id:'re',     name:'อสังหาฯ',          color:'#8a9a9f'},
 ];
 
 /* ---------- รายรับรายจ่าย (ตามชีต Track_expense) ---------- */

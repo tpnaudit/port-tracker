@@ -3,147 +3,161 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0d1020">
+<meta name="theme-color" content="#17313a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>My Port — Portfolio Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="core.js"></script>
 <script src="seed-data.enc.js"></script>
+<script src="sync-token.enc.js" onerror="void 0"></script>
 <script src="seed-data.js"></script>
 <style>
 :root{
-  --bg:#0d1020; --panel:#151a30; --panel2:#1b2140; --line:#262e52;
-  --text:#e8ecf8; --muted:#8b93b8; --accent:#6d8bff; --accent2:#9d6bff;
-  --green:#34d399; --red:#fb7185; --gold:#fbbf24;
-  --c-saving:#38bdf8; --c-fund:#818cf8; --c-bond:#34d399; --c-stock:#fb7185;
-  --c-gold:#fbbf24; --c-crypto:#c084fc; --c-re:#94a3b8;
+  --ink:#16252b; --mute:#64757c; --line:#dfe5e7; --bg:#f4f6f6; --card:#fff; --soft:#fafbfb;
+  --side:#17313a; --side-ink:#c9d8dc; --acc:#0d7a6b; --acc-d:#0a6256; --acc-soft:#e3f3f0;
+  --warn:#b45309; --warn-soft:#fdf1dc; --bad:#b42318; --bad-soft:#fde8e6; --info:#31577a; --info-soft:#e6eef6;
+  /* ชื่อเดิมที่โค้ดส่วนอื่นใช้ */
+  --text:var(--ink); --muted:var(--mute); --panel:var(--card); --panel2:var(--soft); --accent:var(--acc);
+  --green:var(--acc); --red:var(--bad); --gold:var(--warn);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Prompt',system-ui,sans-serif;font-size:14px;min-height:100vh;
-  background-image:radial-gradient(1200px 500px at 80% -10%,rgba(109,139,255,.12),transparent),radial-gradient(900px 400px at 10% 110%,rgba(157,107,255,.10),transparent);}
-.wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-h1{font-size:22px;font-weight:600;letter-spacing:.3px}
-h1 .grad{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{color:var(--muted);font-size:12.5px}
+body{background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Thai","Leelawadee UI","Segoe UI",Tahoma,sans-serif;font-size:14.5px;line-height:1.5;min-height:100vh}
+.side{position:fixed;inset:0 auto 0 0;width:220px;background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;z-index:20}
+.brand{padding:20px 18px 16px}
+.brand b{display:block;color:#fff;font-size:18px;font-weight:600;letter-spacing:.2px}
+.brand span{display:block;font-size:12px;opacity:.7;margin-top:2px}
+.tabs{flex:1;padding:4px 10px;display:flex;flex-direction:column;gap:2px}
+.tab{padding:9px 12px;border-radius:8px;color:var(--side-ink);cursor:pointer;font-size:14.5px}
+.tab:hover{background:rgba(255,255,255,.07);color:#fff}
+.tab.active{background:var(--acc);color:#fff;font-weight:500}
+.side-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:12px}
+.side-foot .pill{background:rgba(255,255,255,.08);border-color:transparent;color:var(--side-ink)}
+.wrap{margin-left:220px;max-width:1300px;padding:24px 28px 60px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:22px;font-weight:600}
+.sub{color:var(--mute);font-size:13px}
 .spacer{flex:1}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:9px 16px;font-family:inherit;font-size:13.5px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:7px}
-.btn:hover{border-color:var(--accent);transform:translateY(-1px)}
-.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:500;box-shadow:0 4px 18px rgba(109,139,255,.35)}
-.btn.small{padding:5px 11px;font-size:12.5px;border-radius:8px}
-.btn.danger:hover{border-color:var(--red);color:var(--red)}
-.tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:0}
-.tab{padding:9px 18px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-size:14px;transition:.15s}
-.tab.active{color:var(--text);border-bottom-color:var(--accent);font-weight:500}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-.card .lbl{color:var(--muted);font-size:12px;margin-bottom:6px}
-.card .val{font-size:22px;font-weight:600;letter-spacing:.3px}
-.card .delta{font-size:12.5px;margin-top:4px}
-.pos{color:var(--green)} .neg{color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 14px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#b9c4c7;background:var(--soft)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:500}
+.btn.primary:hover{background:var(--acc-d)}
+.btn.small{padding:3px 10px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{border-color:var(--bad)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card .lbl{color:var(--mute);font-size:13px}
+.card .val{font-size:23px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.card .delta{font-size:12.5px;margin-top:2px;color:var(--mute)}
+.pos{color:var(--acc)} .neg{color:var(--bad)}
+.card .delta.pos{color:var(--acc)} .card .delta.neg{color:var(--bad)}
 .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px}
 .grid2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-@media(max-width:900px){.grid2,.grid2b{grid-template-columns:1fr}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-.panel h3{font-size:14px;font-weight:500;margin-bottom:12px;color:#c3cbe8}
+@media(max-width:1000px){.grid2,.grid2b{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.panel h3{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)}
 .chartbox{position:relative;height:280px}
 .chartbox.tall{height:320px}
-.checks{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.checks{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-bottom:8px}
 .checks label{display:flex;align-items:center;gap:5px;cursor:pointer}
-table{border-collapse:collapse;width:100%;font-size:13px}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
-th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
-th{color:var(--muted);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--panel2)}
-td.name,th.name{text-align:left;position:sticky;left:0;background:var(--panel);z-index:2;min-width:150px;border-right:1px solid var(--line)}
-tr.cat td{background:var(--panel2);font-weight:600}
-tr.cat td.name{background:var(--panel2)}
-tr.total td{background:#20284d;font-weight:700;font-size:13.5px}
-tr.total td.name{background:#20284d}
-tr.sub td{color:#aeb6d8}
-tr.pct td{color:var(--muted);font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--mute);font-weight:600;font-size:12.5px;position:sticky;top:0;background:var(--soft)}
+td.name,th.name{text-align:left;position:sticky;left:0;background:#fff;z-index:2;min-width:160px;border-right:1px solid var(--line)}
+th.name{background:var(--soft)}
+tr.cat td,tr.cat td.name{background:#f4f7f7;font-weight:600}
+tr.total td,tr.total td.name{background:var(--acc-soft);font-weight:700;border-top:2px solid var(--line)}
+tr.sub td{color:var(--ink)}
+tr.sub td.name{padding-left:28px}
+tr.pct td{color:var(--mute);font-size:12.5px}
+tr:hover td{background:#f7faf9}
 .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:8px;vertical-align:1px}
-.colbtns{display:flex;gap:4px;justify-content:flex-end;margin-top:3px}
-.iconbtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:1px 4px;border-radius:5px}
-.iconbtn:hover{color:var(--text);background:var(--panel)}
+.colbtns{display:flex;gap:4px;justify-content:flex-end;margin-top:2px}
+.iconbtn{background:none;border:none;color:var(--mute);cursor:pointer;font-size:13px;padding:1px 5px;border-radius:5px}
+.iconbtn:hover{color:var(--acc);background:var(--acc-soft)}
 /* modal */
-.overlay{position:fixed;inset:0;background:rgba(5,8,20,.72);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:30px 14px;overflow-y:auto}
+.overlay{position:fixed;inset:0;background:rgba(22,37,43,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:30px 14px;overflow-y:auto}
 .overlay.open{display:flex}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:100%;max-width:760px;padding:22px 24px}
+.modal{background:#fff;border:1px solid var(--line);border-radius:12px;width:100%;max-width:780px;padding:22px 24px;box-shadow:0 12px 40px rgba(22,37,43,.18)}
 .modal h2{font-size:17px;font-weight:600;margin-bottom:16px}
 .mrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
-.field{display:flex;flex-direction:column;gap:5px}
-.field label{font-size:12px;color:var(--muted)}
-input,select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 11px;font-family:inherit;font-size:13.5px;outline:none;transition:.15s}
-input:focus,select:focus{border-color:var(--accent)}
-input.err{border-color:var(--red)}
-input.num{text-align:right;width:150px}
-.acc-grid{display:grid;grid-template-columns:150px 1fr 1fr 110px 30px;gap:8px;align-items:center;margin-bottom:7px}
-.acc-grid .cv{text-align:right;color:var(--muted);font-size:12.5px}
-.groupbox{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:12px}
-.grouphead{display:flex;align-items:center;margin-bottom:11px}
-.grouphead .gt{margin-left:auto;font-weight:600;font-size:13.5px}
-.hint{font-size:11.5px;color:var(--muted);margin-top:2px}
-.modalfoot{display:flex;align-items:center;gap:12px;margin-top:18px;padding-top:15px;border-top:1px solid var(--line)}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;color:var(--mute)}
+input,select{font:inherit;font-size:14.5px;color:var(--ink);border:1px solid #c9d2d5;border-radius:8px;padding:7px 10px;background:#fff;outline:none}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
+input.err{border-color:var(--bad);background:var(--bad-soft)}
+input.num{text-align:right;width:150px;font-variant-numeric:tabular-nums}
+.acc-grid{display:grid;grid-template-columns:170px 1fr 1fr 110px 30px;gap:8px;align-items:center;margin-bottom:7px}
+.acc-grid .cv{text-align:right;color:var(--mute);font-size:13px;font-variant-numeric:tabular-nums}
+.groupbox{border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-bottom:12px}
+.grouphead{display:flex;align-items:center;margin-bottom:10px}
+.grouphead .gt{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
+.hint{font-size:12px;color:var(--mute);margin-top:2px}
+.modalfoot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:15px;border-top:1px solid var(--line)}
 .bigtotal{font-size:19px;font-weight:700}
-.addacc{background:none;border:1px dashed var(--line);color:var(--muted);width:100%;padding:7px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:12.5px}
-.addacc:hover{color:var(--accent);border-color:var(--accent)}
-.set-grid{display:grid;grid-template-columns:200px 130px 160px;gap:9px;align-items:center;margin-bottom:8px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--accent);padding:11px 22px;border-radius:12px;font-size:13.5px;z-index:99;display:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.addacc{background:none;border:1px dashed #c9d2d5;color:var(--mute);width:100%;padding:7px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px}
+.addacc:hover{color:var(--acc);border-color:var(--acc)}
+.set-grid{display:grid;grid-template-columns:240px 130px 160px;gap:9px;align-items:center;margin-bottom:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--side);color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;z-index:99;display:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .fxline{display:flex;align-items:center;gap:8px}
-.mut{color:var(--muted)}
-.pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
-.settings-sec{margin-bottom:26px}
+.mut{color:var(--mute)}
+.pill{display:inline-block;font-size:12px;padding:1px 10px;border-radius:99px;background:#eceff0;color:var(--mute);border:1px solid transparent}
+.settings-sec{margin-bottom:18px}
 .acclist{display:flex;flex-wrap:wrap;gap:8px}
-.accpill{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:12.5px}
-.accpill button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px}
-.accpill button:hover{color:var(--red)}
-footer{margin-top:28px;color:var(--muted);font-size:11.5px;text-align:center}
-.pill.sync-ok{border-color:rgba(52,211,153,.5);color:var(--green)}
-.pill.sync-busy{border-color:rgba(109,139,255,.5);color:var(--accent)}
-.pill.sync-err{border-color:rgba(251,113,133,.5);color:var(--red)}
+.accpill{display:flex;align-items:center;gap:7px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:13px}
+.accpill button{background:none;border:none;color:var(--mute);cursor:pointer;font-size:13px}
+.accpill button:hover{color:var(--bad)}
+footer{margin-top:28px;color:var(--mute);font-size:12px;text-align:center}
+.pill.sync-ok,.side-foot .pill.sync-ok{background:var(--acc);color:#fff}
+.pill.sync-busy,.side-foot .pill.sync-busy{background:var(--info-soft);color:var(--info)}
+.pill.sync-err,.side-foot .pill.sync-err{background:var(--bad-soft);color:var(--bad)}
 /* ===== mobile ===== */
-@media(max-width:640px){
-  .wrap{padding:14px 12px 50px}
+@media(max-width:760px){
+  .side{position:sticky;top:0;inset:auto;width:auto;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap}
+  .brand{padding:10px 14px 6px;flex:1}
+  .brand b{font-size:16px} .brand span{display:none}
+  .side-foot{border:0;padding:10px 14px 6px}
+  .tabs{flex:0 0 100%;flex-direction:row;overflow-x:auto;padding:4px 8px 8px}
+  .tab{white-space:nowrap;padding:6px 12px}
+  .wrap{margin-left:0;padding:14px 12px 50px}
   h1{font-size:19px}
-  header{gap:8px}
-  .btn{padding:8px 12px;font-size:12.5px}
-  .tabs{overflow-x:auto}
-  .tab{padding:8px 13px;white-space:nowrap}
+  .btn{padding:7px 11px;font-size:13px}
   .cards{grid-template-columns:1fr 1fr;gap:9px}
-  .card{padding:12px 13px;border-radius:12px}
-  .card .val{font-size:17px}
-  .card .delta{font-size:11px}
+  .card{padding:12px 13px}
+  .card .val{font-size:18px}
+  .card .delta{font-size:11.5px}
   .chartbox{height:230px}
   .chartbox.tall{height:260px}
   .panel{padding:13px 12px}
   .overlay{padding:8px 6px}
-  .modal{padding:16px 13px;border-radius:14px}
+  .modal{padding:16px 13px}
   .acc-legend{display:none!important}
   .acc-grid{grid-template-columns:1fr 1fr 30px;row-gap:4px;margin-bottom:12px}
-  .acc-grid > div:nth-child(1){grid-column:1;grid-row:1;font-size:13px;align-self:center}
+  .acc-grid > div:nth-child(1){grid-column:1;grid-row:1;font-size:13.5px;align-self:center}
   .acc-grid > input[data-f="t"]{grid-column:1;grid-row:2}
   .acc-grid > input[data-f="u"]{grid-column:2;grid-row:2}
   .acc-grid .cv{grid-column:2;grid-row:1;align-self:center}
   .acc-grid .iconbtn{grid-column:3;grid-row:1}
-  .set-grid{grid-template-columns:1fr 80px 110px}
-  th,td{padding:7px 9px;font-size:12px}
-  td.name,th.name{min-width:118px}
+  .set-grid{grid-template-columns:1fr 80px 100px}
+  th,td{padding:7px 9px;font-size:12.5px}
+  td.name,th.name{min-width:120px}
 }
 .ie-grid{display:grid;grid-template-columns:1fr 150px 90px;gap:8px;align-items:center;margin-bottom:6px}
 .ie-grid .b{font-size:11.5px;color:var(--muted);text-align:right}
 .badge{font-size:10.5px;padding:1px 7px;border-radius:20px;border:1px solid var(--line);color:var(--muted);margin-left:6px;white-space:nowrap}
-.badge.warn{border-color:rgba(251,191,36,.55);color:var(--gold)}
-.badge.due{border-color:rgba(251,113,133,.55);color:var(--red)}
-.bar{height:7px;border-radius:5px;background:var(--panel2);overflow:hidden;margin-top:5px}
+.badge.warn{border-color:transparent;background:var(--warn-soft);color:var(--warn)}
+.badge.due{border-color:transparent;background:var(--bad-soft);color:var(--bad)}
+.bar{height:7px;border-radius:5px;background:#e8eded;overflow:hidden;margin-top:5px}
 .bar > i{display:block;height:100%;background:var(--accent)}
 .bar > i.over{background:var(--red)}
 .annrow{margin-bottom:12px;font-size:13px}
 .annrow .r{display:flex;justify-content:space-between;gap:8px}
 .pj-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;cursor:pointer}
-.pj-card:hover{border-color:var(--accent)}
+.pj-card:hover{border-color:var(--acc);box-shadow:0 2px 10px rgba(13,122,107,.08)}
 .pj-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .pj-head b{font-size:15.5px;font-weight:600}
 .pj-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
@@ -152,10 +166,10 @@ footer{margin-top:28px;color:var(--muted);font-size:11.5px;text-align:center}
 .pj-line{display:grid;grid-template-columns:1.6fr 110px 110px 110px 120px 28px;gap:7px;align-items:center;margin-bottom:6px}
 .pj-line input,.pj-line select{width:100%}
 .pj-sec{font-size:12.5px;color:var(--muted);margin:12px 0 6px}
-td.carried{color:var(--gold)}
+td.carried{color:var(--warn);background:var(--warn-soft)}
 .prev{font-size:11px;color:var(--muted);text-align:right}
-.prev.big{color:var(--gold)}
-@media(max-width:640px){
+.prev.big{color:var(--warn);font-weight:500}
+@media(max-width:760px){
   .pj-line{grid-template-columns:1fr 1fr 28px}
   .pj-line > :nth-child(1){grid-column:1 / span 2}
   .ie-grid{grid-template-columns:1fr 120px}
@@ -164,27 +178,29 @@ td.carried{color:var(--gold)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <h1>💼 My <span class="grad">Port</span></h1>
-      <div class="sub" id="lastUpdated"></div>
-      <div style="margin-top:5px"><span class="pill" id="syncChip">💾 ข้อมูลเก็บในเครื่องนี้</span></div>
-    </div>
-    <div class="spacer"></div>
-    <button class="btn" onclick="exportJSON()">⬇ สำรองข้อมูล</button>
-    <button class="btn" onclick="document.getElementById('importFile').click()">⬆ นำเข้า</button>
-    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
-    <button class="btn primary" onclick="openNewSnapshot()">＋ อัปเดตพอร์ต</button>
-  </header>
-
-  <div class="tabs">
+<aside class="side">
+  <div class="brand"><b>My Port</b><span>พอร์ตลงทุน · รายรับรายจ่าย · Projects</span></div>
+  <nav class="tabs">
     <div class="tab active" data-tab="overview" onclick="switchTab('overview')">ภาพรวม</div>
     <div class="tab" data-tab="table" onclick="switchTab('table')">ตารางพอร์ต</div>
     <div class="tab" data-tab="ie" onclick="switchTab('ie')">รายรับรายจ่าย</div>
     <div class="tab" data-tab="proj" onclick="switchTab('proj')">Projects</div>
     <div class="tab" data-tab="settings" onclick="switchTab('settings')">ตั้งค่า</div>
-  </div>
+  </nav>
+  <div class="side-foot"><span class="pill" id="syncChip">ข้อมูลเก็บในเครื่องนี้</span></div>
+</aside>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="pageTitle">ภาพรวม</h1>
+      <div class="sub" id="lastUpdated"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="exportJSON()">สำรองข้อมูล</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">นำเข้า</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    <button class="btn primary" onclick="openNewSnapshot()">＋ อัปเดตพอร์ต</button>
+  </header>
 
   <div id="tab-overview">
     <div class="cards" id="statCards"></div>
@@ -245,30 +261,30 @@ td.carried{color:var(--gold)}
 
   <div id="tab-settings" style="display:none">
     <div class="panel settings-sec">
-      <h3>💰 Cash Flow ต่อปี (ประมาณการรายรับจากพอร์ต)</h3>
+      <h3>Cash Flow ต่อปี (ประมาณการรายรับจากพอร์ต)</h3>
       <div class="hint" style="margin-bottom:12px">กำหนดฐานคำนวณ + อัตรา % ต่อปี — หัก "ยอดหักฐาน" ออกก่อนคูณอัตรา (เช่น K PLUS − 120,000 × 4%)</div>
       <div id="cfConfigBox"></div>
     </div>
     <div class="panel settings-sec">
-      <h3>📈 Expected Return ต่อปี (% ตามประเภทสินทรัพย์)</h3>
+      <h3>Expected Return ต่อปี (% ตามประเภทสินทรัพย์)</h3>
       <div id="expConfigBox" style="margin-top:10px"></div>
     </div>
     <div class="panel settings-sec">
-      <h3>🧾 งบรายรับรายจ่าย</h3>
+      <h3>งบรายรับรายจ่าย</h3>
       <div class="hint" style="margin-bottom:12px">งบรายเดือน (หมวดประจำ) และงบทั้งปี (หมวดรายปี) — ใช้คำนวณงบฟุ่มเฟือยแบบชีต Track_expense</div>
       <div id="ieCfgBox"></div>
     </div>
     <div class="panel settings-sec">
-      <h3>🗂 บัญชี / รายการในพอร์ต</h3>
+      <h3>บัญชี / รายการในพอร์ต</h3>
       <div class="hint" style="margin-bottom:12px">ลบรายการจะลบข้อมูลย้อนหลังของรายการนั้นทั้งหมด — เพิ่มรายการใหม่ได้จากหน้าต่าง "อัปเดตพอร์ต" เช่นกัน</div>
       <div id="accManager"></div>
     </div>
     <div class="panel settings-sec">
-      <h3>☁️ ซิงก์ข้ามเครื่อง (ผ่าน GitHub — เข้ารหัสก่อนอัพเสมอ)</h3>
+      <h3>ซิงก์ข้ามเครื่อง (ผ่าน GitHub — เข้ารหัสก่อนอัพเสมอ)</h3>
       <div id="syncBox"></div>
     </div>
     <div class="panel settings-sec">
-      <h3>⚠️ ข้อมูล</h3>
+      <h3>ข้อมูล</h3>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" onclick="exportCSV()">ส่งออก CSV (เปิดใน Excel ได้)</button>
         <button class="btn danger" onclick="resetData()">รีเซ็ตกลับข้อมูลตั้งต้นจาก Port.xlsx</button>
@@ -288,18 +304,18 @@ td.carried{color:var(--gold)}
       <div class="field"><label>เรท USD→THB</label>
         <div class="fxline">
           <input class="num" style="width:110px" id="edFx" inputmode="decimal">
-          <button class="btn small" id="btnFx" onclick="fetchFx()">🌐 ดึงเรทล่าสุด</button>
+          <button class="btn small" id="btnFx" onclick="fetchFx()">ดึงเรทล่าสุด</button>
         </div>
       </div>
     </div>
-    <div class="hint" style="margin-bottom:14px">💡 ช่องตัวเลขพิมพ์สูตรได้เหมือน Excel เช่น <b>96390+9971</b> หรือ <b>5*63170+3*60000</b> — ช่อง USD จะถูกคูณเรทให้อัตโนมัติ</div>
+    <div class="hint" style="margin-bottom:14px">ช่องตัวเลขพิมพ์สูตรได้เหมือน Excel เช่น <b>96390+9971</b> หรือ <b>5*63170+3*60000</b> — ช่อง USD จะถูกคูณเรทให้อัตโนมัติ</div>
     <div id="editorGroups"></div>
     <div class="modalfoot">
       <div>รวมทั้งพอร์ต: <span class="bigtotal" id="edTotal">—</span></div>
       <div class="spacer"></div>
       <button class="btn danger" id="btnDelSnap" onclick="deleteSnapshot()" style="display:none">ลบงวดนี้</button>
       <button class="btn" onclick="closeEditor()">ยกเลิก</button>
-      <button class="btn primary" onclick="saveSnapshot()">💾 บันทึก</button>
+      <button class="btn primary" onclick="saveSnapshot()">บันทึก</button>
     </div>
   </div>
 </div>
@@ -316,7 +332,7 @@ td.carried{color:var(--gold)}
       <div class="spacer"></div>
       <button class="btn danger" id="btnDelIe" onclick="deleteIeMonth()" style="display:none">ลบเดือนนี้</button>
       <button class="btn" onclick="closeOv('ieOverlay')">ยกเลิก</button>
-      <button class="btn primary" onclick="saveIeMonth()">💾 บันทึก</button>
+      <button class="btn primary" onclick="saveIeMonth()">บันทึก</button>
     </div>
   </div>
 </div>
@@ -341,7 +357,7 @@ td.carried{color:var(--gold)}
       <div class="spacer"></div>
       <button class="btn danger" onclick="deleteProject()">ลบ</button>
       <button class="btn" onclick="closeOv('projOverlay')">ยกเลิก</button>
-      <button class="btn primary" onclick="saveProject()">💾 บันทึก</button>
+      <button class="btn primary" onclick="saveProject()">บันทึก</button>
     </div>
   </div>
 </div>
@@ -349,9 +365,9 @@ td.carried{color:var(--gold)}
 <!-- PIN gate -->
 <div class="overlay" id="pinGate" style="z-index:100;align-items:center">
   <div class="modal" style="max-width:360px;text-align:center">
-    <div style="font-size:38px;margin-bottom:10px">🔐</div>
+    
     <h2 style="margin-bottom:6px">My Port</h2>
-    <div class="hint" style="margin-bottom:16px">ใส่ PIN เพื่อปลดล็อคข้อมูลพอร์ต (ครั้งแรกของเครื่องนี้)</div>
+    <div class="hint" id="pinMsg" style="margin-bottom:16px">ใส่ PIN เพื่อปลดล็อคข้อมูลและเปิดซิงก์ (ครั้งแรกของเครื่องนี้)</div>
     <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"
       style="width:100%;text-align:center;font-size:22px;letter-spacing:8px;margin-bottom:8px"
       onkeydown="if(event.key==='Enter')unlockSeed()">
@@ -365,6 +381,9 @@ td.carried{color:var(--gold)}
 <script>
 /* ================= DATA MODEL ================= */
 const {CATS, IE} = PortCore;
+const FONT = '"IBM Plex Sans Thai", sans-serif';
+const CH = {ink:'#16252b', tick:'#64757c', grid:'#e8eded'};
+if(typeof Chart!=='undefined'){ Chart.defaults.font.family = FONT; Chart.defaults.color = CH.tick; }
 const {encryptJSON, decryptJSON, evalExpr, cellVal, normState, mergeStates, migrate} = PortCore;
 const SEED = (typeof window!=="undefined" && window.SEED) || null; // ข้อมูลตั้งต้นแยกไปที่ seed-data.js (local) / seed-data.enc.js (เข้ารหัสสำหรับเว็บ)
 const LS_KEY = 'portTracker_v1';
@@ -377,29 +396,29 @@ function setSync(mode,msg){
 }
 function cloudLoad(){
   if(!CLOUD) return;
-  setSync('busy','⏳ กำลังโหลดข้อมูลจาก Google Drive…');
+  setSync('busy','กำลังโหลดข้อมูลจาก Google Drive…');
   google.script.run.withSuccessHandler(txt=>{
     if(txt){
       try{
         const s = JSON.parse(txt);
         if(s && s.snapshots){ state = migrate(s); localStorage.setItem(LS_KEY, txt); renderAll(); }
       }catch(e){}
-      setSync('ok','☁️ ซิงก์กับ Google Drive แล้ว');
+      setSync('ok','ซิงก์กับ Google Drive แล้ว');
     }else{
       // ยังไม่มีไฟล์บน Drive — อัปโหลดข้อมูลปัจจุบันขึ้นไปครั้งแรก
       cloudPush();
     }
-  }).withFailureHandler(()=>setSync('err','⚠️ โหลดจาก Drive ไม่สำเร็จ')).loadData();
+  }).withFailureHandler(()=>setSync('err','โหลดจาก Drive ไม่สำเร็จ')).loadData();
 }
 let _pushTimer = null;
 function cloudPush(){
   if(!CLOUD) return;
-  setSync('busy','⏳ กำลังบันทึกขึ้น Google Drive…');
+  setSync('busy','กำลังบันทึกขึ้น Google Drive…');
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(()=>{
     google.script.run
-      .withSuccessHandler(()=>setSync('ok','☁️ ซิงก์กับ Google Drive แล้ว'))
-      .withFailureHandler(()=>setSync('err','⚠️ บันทึกขึ้น Drive ไม่สำเร็จ — ข้อมูลยังอยู่ในเครื่อง'))
+      .withSuccessHandler(()=>setSync('ok','ซิงก์กับ Google Drive แล้ว'))
+      .withFailureHandler(()=>setSync('err','บันทึกขึ้น Drive ไม่สำเร็จ — ข้อมูลยังอยู่ในเครื่อง'))
       .saveData(JSON.stringify(state));
   }, 800);
 }
@@ -461,7 +480,7 @@ async function ghSyncNow(){
   const cfg = getSyncCfg();
   if(!state || !cfg || !cfg.token || !cfg.pin || _syncing) return;
   _syncing = true;
-  setSync('busy','⏳ กำลังซิงก์…');
+  setSync('busy','กำลังซิงก์…');
   try{
     for(let attempt=0; attempt<2; attempt++){
       const {sha, data} = await ghGet(cfg);
@@ -478,9 +497,9 @@ async function ghSyncNow(){
       break;
     }
     cfg.lastSync = Date.now(); setSyncCfg(cfg);
-    setSync('ok','☁️ ซิงก์แล้ว '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}));
+    setSync('ok','ซิงก์แล้ว '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}));
   }catch(e){
-    setSync('err','⚠️ ซิงก์ไม่สำเร็จ — ข้อมูลยังอยู่ในเครื่อง');
+    setSync('err','ซิงก์ไม่สำเร็จ — ข้อมูลยังอยู่ในเครื่อง');
   }
   _syncing = false;
   const box = document.getElementById('syncBox');
@@ -515,7 +534,7 @@ function sortedSnaps(){ return state.snapshots.filter(s=>!s.deleted).sort((a,b)=
 
 /* ================= FORMAT ================= */
 const nf = new Intl.NumberFormat('th-TH',{maximumFractionDigits:0});
-function fmt(n){ return isNaN(n) ? '⚠️' : nf.format(Math.round(n)); }
+function fmt(n){ return isNaN(n) ? '!' : nf.format(Math.round(n)); }
 function fmtPct(x,d=1){ return (x==null||!isFinite(x)) ? '—' : ((x>0?'+':'')+(x*100).toFixed(d)+'%'); }
 function thDate(iso){
   const [y,m,d] = iso.split('-').map(Number);
@@ -530,6 +549,7 @@ function toast(msg){
 /* ================= TABS ================= */
 function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+  document.getElementById('pageTitle').textContent = {overview:'ภาพรวม',table:'ตารางพอร์ต',ie:'รายรับรายจ่าย',proj:'Projects',settings:'ตั้งค่า'}[id];
   for(const k of ['overview','table','ie','proj','settings']) document.getElementById('tab-'+k).style.display = k===id?'':'none';
   if(id==='overview') renderOverview();
   if(id==='table') renderTable();
@@ -569,30 +589,30 @@ function renderOverview(){
 
   const labels = snaps.map(s=>thDate(s.date));
   const totals = snaps.map(s=>snapTotals(s));
-  const gridC = 'rgba(120,130,180,.12)', tickC = '#8b93b8';
+  const gridC = CH.grid, tickC = CH.tick;
   const commonOpts = {responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{labels:{color:'#c3cbe8',boxWidth:12,font:{family:'Prompt'}}}},
-    scales:{x:{ticks:{color:tickC,font:{family:'Prompt',size:10}},grid:{color:gridC}},
-            y:{ticks:{color:tickC,font:{family:'Prompt',size:10},callback:v=>nf.format(v)},grid:{color:gridC}}}};
+    plugins:{legend:{labels:{color:CH.ink,boxWidth:12,font:{family:FONT}}}},
+    scales:{x:{ticks:{color:tickC,font:{family:FONT,size:10}},grid:{color:gridC}},
+            y:{ticks:{color:tickC,font:{family:FONT,size:10},callback:v=>nf.format(v)},grid:{color:gridC}}}};
 
-  const ds = [{label:'ทั้งพอร์ต',data:totals.map(t=>t.total),borderColor:'#6d8bff',backgroundColor:'rgba(109,139,255,.15)',fill:true,tension:.3,pointRadius:3}];
+  const ds = [{label:'ทั้งพอร์ต',data:totals.map(t=>t.total),borderColor:'#0d7a6b',backgroundColor:'rgba(13,122,107,.10)',fill:true,tension:.3,pointRadius:3}];
   if(document.getElementById('ckExCrypto').checked)
-    ds.push({label:'ไม่รวม Crypto',data:totals.map(t=>t.exCrypto),borderColor:'#c084fc',tension:.3,pointRadius:2,borderDash:[6,4]});
+    ds.push({label:'ไม่รวม Crypto',data:totals.map(t=>t.exCrypto),borderColor:'#9b4dca',tension:.3,pointRadius:2,borderDash:[6,4]});
   if(document.getElementById('ckExRe').checked)
-    ds.push({label:'ไม่รวม Crypto+อสังหาฯ',data:totals.map(t=>t.exBoth),borderColor:'#34d399',tension:.3,pointRadius:2,borderDash:[3,3]});
+    ds.push({label:'ไม่รวม Crypto+อสังหาฯ',data:totals.map(t=>t.exBoth),borderColor:'#31577a',tension:.3,pointRadius:2,borderDash:[3,3]});
   mkChart('chLine',{type:'line',data:{labels,datasets:ds},options:commonOpts});
 
   mkChart('chDonut',{type:'doughnut',
-    data:{labels:CATS.map(c=>c.name),datasets:[{data:CATS.map(c=>T.byCat[c.id]),backgroundColor:CATS.map(c=>c.color),borderColor:'#151a30',borderWidth:3}]},
+    data:{labels:CATS.map(c=>c.name),datasets:[{data:CATS.map(c=>T.byCat[c.id]),backgroundColor:CATS.map(c=>c.color),borderColor:'#fff',borderWidth:3}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
-      plugins:{legend:{position:'right',labels:{color:'#c3cbe8',boxWidth:11,font:{family:'Prompt',size:11.5},
+      plugins:{legend:{position:'right',labels:{color:CH.ink,boxWidth:11,font:{family:FONT,size:11.5},
         generateLabels(ch){const d=ch.data;const tot=d.datasets[0].data.reduce((a,b)=>a+b,0);
           return d.labels.map((l,i)=>({text:`${l}  ${(d.datasets[0].data[i]/tot*100).toFixed(1)}%`,fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:'transparent',index:i}));}}},
       tooltip:{callbacks:{label:c=>' ฿'+nf.format(c.raw)}}}}});
 
   const momData = snaps.map((s,i)=> i===0?null:(totals[i].total-totals[i-1].total)/totals[i-1].total*100);
   mkChart('chBar',{type:'bar',
-    data:{labels,datasets:[{label:'% เปลี่ยนแปลง',data:momData,backgroundColor:momData.map(v=>v>=0?'rgba(52,211,153,.75)':'rgba(251,113,133,.75)'),borderRadius:5}]},
+    data:{labels,datasets:[{label:'% เปลี่ยนแปลง',data:momData,backgroundColor:momData.map(v=>v>=0?'#0d7a6b':'#d9534f'),borderRadius:5}]},
     options:{...commonOpts,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+(c.raw>=0?'+':'')+c.raw?.toFixed(2)+'%'}}}}});
 
   mkChart('chCat',{type:'line',
@@ -671,10 +691,10 @@ function renderSyncBox(){
   if(cfg && cfg.token){
     box.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="pill sync-ok">✓ เชื่อมต่อแล้ว</span>
+        <span class="pill sync-ok">เชื่อมต่อแล้ว</span>
         <span class="mut" style="font-size:12px">ซิงก์ล่าสุด: ${cfg.lastSync?new Date(cfg.lastSync).toLocaleString('th-TH'):'—'}</span>
         <div class="spacer"></div>
-        <button class="btn small" onclick="ghSyncNow()">🔄 ซิงก์เดี๋ยวนี้</button>
+        <button class="btn small" onclick="ghSyncNow()">ซิงก์เดี๋ยวนี้</button>
         <button class="btn small danger" onclick="if(confirm('ยกเลิกการซิงก์เครื่องนี้? (ข้อมูลในเครื่องยังอยู่)')){setSyncCfg(null);renderSyncBox()}">ยกเลิกการเชื่อมต่อ</button>
       </div>
       <div class="hint" style="margin-top:8px">ข้อมูลถูกเข้ารหัส AES-256 ด้วย PIN ก่อนอัพขึ้น GitHub ทุกครั้ง — บน GitHub อ่านไม่ออก</div>`;
@@ -702,7 +722,7 @@ async function connectSync(){
   toast('กำลังทดสอบการเชื่อมต่อ…');
   await ghSyncNow();
   const cfg = getSyncCfg();
-  if(cfg.lastSync){ toast('เชื่อมต่อสำเร็จ ✓ ข้อมูลซิงก์แล้ว'); }
+  if(cfg.lastSync){ toast('เชื่อมต่อสำเร็จ ข้อมูลซิงก์แล้ว'); }
   else { setSyncCfg(null); toast('เชื่อมต่อไม่สำเร็จ — เช็ค Token/PIN แล้วลองใหม่'); }
   renderSyncBox();
 }
@@ -821,7 +841,7 @@ function recalcEditor(){
 document.getElementById('edFx').addEventListener('input', recalcEditor);
 async function fetchFx(){
   const btn = document.getElementById('btnFx');
-  btn.disabled = true; btn.textContent = '⏳ กำลังดึง…';
+  btn.disabled = true; btn.textContent = 'กำลังดึง…';
   try{
     let rate = null;
     try{
@@ -840,7 +860,7 @@ async function fetchFx(){
     if(rate){ document.getElementById('edFx').value = Math.round(rate*100)/100; recalcEditor(); toast('เรทล่าสุด: '+rate.toFixed(2)+' บาท/USD'); }
     else toast('ดึงเรทไม่สำเร็จ — กรอกเองได้เลย');
   }catch(e){ toast('ดึงเรทไม่สำเร็จ — กรอกเองได้เลย'); }
-  btn.disabled = false; btn.textContent = '🌐 ดึงเรทล่าสุด';
+  btn.disabled = false; btn.textContent = 'ดึงเรทล่าสุด';
 }
 function saveSnapshot(){
   const date = document.getElementById('edDate').value;
@@ -864,7 +884,7 @@ function saveSnapshot(){
   }
   state.snapshots = state.snapshots.filter(s=>s.date!==date); // ล้างงวดซ้ำ/tombstone ที่วันที่เดียวกัน
   state.snapshots.push(draft);
-  save(); closeEditor(); renderAll(); toast('บันทึกแล้ว ✓');
+  save(); closeEditor(); renderAll(); toast('บันทึกแล้ว');
 }
 function deleteSnapshot(){
   if(editIndex===null) return;
@@ -890,7 +910,7 @@ function importJSON(ev){
     try{
       const s = JSON.parse(rd.result);
       if(!s.snapshots || !s.accounts) throw 0;
-      state = migrate(s); save(); renderAll(); toast('นำเข้าข้อมูลแล้ว ✓');
+      state = migrate(s); save(); renderAll(); toast('นำเข้าข้อมูลแล้ว');
     }catch(e){ toast('ไฟล์ไม่ถูกต้อง'); }
   };
   rd.readAsText(f); ev.target.value='';
@@ -967,12 +987,12 @@ function renderIE(){
   ].map(c=>`<div class="card"><div class="lbl">${c.l}</div><div class="val">${c.v}</div><div class="delta ${c.c}">${c.d}</div></div>`).join('');
 
   mkChart('chIe',{type:'bar',data:{labels:M.map(m=>MN[m.m-1]),datasets:[
-    {label:'รายรับ',data:M.map(m=>m.income),backgroundColor:'rgba(52,211,153,.75)',borderRadius:4,stack:'i'},
-    {label:'รายจ่าย',data:M.map(m=>m.expense),backgroundColor:'rgba(251,113,133,.75)',borderRadius:4,stack:'e'},
-    {label:'ฟุ่มเฟือย',data:M.map(m=>m.funAct),backgroundColor:'rgba(251,191,36,.75)',borderRadius:4,stack:'e'},
-    {label:'ออมเที่ยว',data:M.map(m=>m.trip),backgroundColor:'rgba(129,140,248,.75)',borderRadius:4,stack:'e'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#c3cbe8',boxWidth:12,font:{family:'Prompt'}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' ฿'+nf.format(c.raw)}}},
-      scales:{x:{stacked:true,ticks:{color:'#8b93b8',font:{family:'Prompt',size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:'#8b93b8',callback:v=>nf.format(v),font:{size:10}},grid:{color:'rgba(120,130,180,.12)'}}}}});
+    {label:'รายรับ',data:M.map(m=>m.income),backgroundColor:'#0d7a6b',borderRadius:4,stack:'i'},
+    {label:'รายจ่าย',data:M.map(m=>m.expense),backgroundColor:'#d9534f',borderRadius:4,stack:'e'},
+    {label:'ฟุ่มเฟือย',data:M.map(m=>m.funAct),backgroundColor:'#e0a43a',borderRadius:4,stack:'e'},
+    {label:'ออมเที่ยว',data:M.map(m=>m.trip),backgroundColor:'#7aa6c2',borderRadius:4,stack:'e'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:CH.ink,boxWidth:12,font:{family:FONT}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' ฿'+nf.format(c.raw)}}},
+      scales:{x:{stacked:true,ticks:{color:CH.tick,font:{family:FONT,size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:CH.tick,callback:v=>nf.format(v),font:{size:10}},grid:{color:CH.grid}}}}});
 
   document.getElementById('ieAnnual').innerHTML = Y.annualStatus.map(a=>{
     const pct = a.budget ? a.spent/a.budget : 0;
@@ -1051,7 +1071,7 @@ function saveIeMonth(){
   state.ie[k] = {v, src: old.src||'กรอกเอง', updatedAt: Date.now()};
   save(); closeOv('ieOverlay');
   const sel = document.getElementById('ieYear'); sel.innerHTML = `<option value="${k.slice(0,4)}" selected></option>`;
-  renderIE(); toast('บันทึกแล้ว ✓');
+  renderIE(); toast('บันทึกแล้ว');
 }
 function deleteIeMonth(){
   if(!ieKey || !confirm('ลบข้อมูลเดือนนี้?')) return;
@@ -1138,7 +1158,7 @@ function saveProject(){
   pjDraft.note = document.getElementById('pjNote').value;
   pjDraft.updatedAt = Date.now();
   state.projects[pjDraft.id] = pjDraft;
-  save(); closeOv('projOverlay'); renderProjects(); toast('บันทึกแล้ว ✓');
+  save(); closeOv('projOverlay'); renderProjects(); toast('บันทึกแล้ว');
 }
 function deleteProject(){
   if(!state.projects[pjDraft.id]){ closeOv('projOverlay'); return; }
@@ -1182,16 +1202,30 @@ async function unlockSeed(){
   const pin = document.getElementById('pinInput').value.trim();
   if(!pin) return;
   const err = document.getElementById('pinErr');
-  err.textContent = '⏳ กำลังถอดรหัส…';
+  err.textContent = 'กำลังถอดรหัส…';
   try{
-    state = await decryptJSON(window.SEED_ENC, pin);
-    const cfg = getSyncCfg()||{}; cfg.pin = pin; setSyncCfg({token:cfg.token||'', pin, lastSync:cfg.lastSync||0});
+    const seed = await decryptJSON(window.SEED_ENC, pin);   // ตรวจว่า PIN ถูก
+    if(!state) state = seed;
+    const cfg = getSyncCfg()||{}; setSyncCfg({token:cfg.token||'', pin, lastSync:cfg.lastSync||0});
+    await enableSyncFromPin();
     document.getElementById('pinGate').classList.remove('open');
     finishInit();
   }catch(e){
     err.textContent = 'PIN ไม่ถูกต้อง ลองใหม่อีกครั้ง';
     document.getElementById('pinInput').value = '';
   }
+}
+/* ซิงก์อัตโนมัติ: token (สิทธิ์เขียนเฉพาะ repo port-tracker) ถูกเข้ารหัสด้วย PIN ไว้ใน sync-token.enc.js
+   ใส่ PIN ครั้งเดียวต่อเครื่อง = เปิดซิงก์ทันที ไม่ต้องวาง token เอง */
+async function enableSyncFromPin(){
+  const cfg = getSyncCfg();
+  if(!window.SYNC_ENC || !cfg || !cfg.pin || cfg.token) return !!(cfg && cfg.token);
+  try{ const t = await decryptJSON(window.SYNC_ENC, cfg.pin); cfg.token = t.token; setSyncCfg(cfg); return true; }
+  catch(e){ return false; }
+}
+function needSyncPin(){
+  const cfg = getSyncCfg();
+  return window.SYNC_ENC && !(cfg && cfg.token);
 }
 function finishInit(){
   state = migrate(state);
@@ -1208,13 +1242,18 @@ async function boot(){
     history.replaceState(null, '', location.pathname+location.search);
   }
   const forceGate = location.search.includes('gate=1');
-  if(state && !forceGate){ finishInit(); return; }
+  if(state && !forceGate){
+    await enableSyncFromPin();
+    finishInit();
+    if(needSyncPin()){ document.getElementById('pinMsg').textContent = 'ใส่ PIN ครั้งเดียวเพื่อเปิดซิงก์ข้อมูลข้ามเครื่อง'; document.getElementById('pinGate').classList.add('open'); }
+    return;
+  }
   if(SEED && !forceGate){ state = JSON.parse(JSON.stringify(SEED)); finishInit(); return; }
   if(window.SEED_ENC){
     const cfg = getSyncCfg();
     if(cfg && cfg.pin && !forceGate){
       // มี PIN จากลิงก์ตั้งค่าแล้ว — ปลดล็อคให้อัตโนมัติ
-      try{ state = await decryptJSON(window.SEED_ENC, cfg.pin); finishInit(); if(m) toast('ตั้งค่าซิงก์จากลิงก์สำเร็จ ✓'); return; }catch(e){}
+      try{ state = await decryptJSON(window.SEED_ENC, cfg.pin); finishInit(); if(m) toast('ตั้งค่าซิงก์จากลิงก์สำเร็จ'); return; }catch(e){}
     }
     document.getElementById('pinGate').classList.add('open');
     setTimeout(()=>document.getElementById('pinInput').focus(), 100);
