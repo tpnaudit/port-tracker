@@ -6,3 +6,6 @@ data.enc.json
 # ไฟล์ทางเลือก Apps Script (ใช้เฉพาะ local)
 Code.gs
 วิธีติดตั้งบนมือถือ.md
+
+# local tooling
+.claude/
