@@ -169,6 +169,70 @@ function projectTotals(p, state){
   return t;
 }
 
+/* ---------- ผลตอบแทนจริง (Reconcile) ----------
+   มูลค่าปลายงวด − มูลค่าต้นงวด − เงินออมที่เติมเข้าพอร์ต = ผลตอบแทนจากการลงทุน
+   เงินออมที่เติม = รายได้งาน (วิชาชีพ/นายหน้า/คืนภาษี/อื่น) − รายจ่าย − ฟุ่มเฟือย (− ออมเที่ยว ถ้าเงินนั้นไม่ได้อยู่ในพอร์ต)
+   รายได้จากการลงทุน (ดอกเบี้ย/ปันผล/ค่าเช่า) เป็นส่วนหนึ่งของผลตอบแทน
+   % = Modified Dietz: กำไร ÷ (ต้นงวด + ครึ่งหนึ่งของเงินที่เติม) */
+const INV_INCOME = ['int','div','rent'];
+function snapTotal(state, snap){ return (state.accounts||[]).reduce((t,a)=>t+(cellVal(snap,a.id)||0),0); }
+function liveSnaps(state){ return (state.snapshots||[]).filter(s=>!s.deleted).sort((a,b)=>a.date.localeCompare(b.date)); }
+function monthsBetween(a, b){ // เดือนหลังเดือนของ a ถึงเดือนของ b (a < b)
+  const out = []; let [y,m] = a.slice(0,7).split('-').map(Number);
+  const end = b.slice(0,7);
+  for(let i=0;i<600;i++){ m++; if(m>12){m=1;y++;} const k = y+'-'+String(m).padStart(2,'0'); if(k>end) break; out.push(k); }
+  return out;
+}
+function flowsFor(state, months, opt){
+  const f = {work:0, inv:0, spend:0, fun:0, trip:0, missing:[]};
+  for(const k of months){
+    const rec = state.ie && state.ie[k];
+    if(!rec || rec.deleted){ f.missing.push(k); continue; }
+    const v = rec.v||{};
+    for(const i of IE.income) (INV_INCOME.includes(i.id) ? (f.inv += n0(v[i.id])) : (f.work += n0(v[i.id])));
+    for(const id of IE_EXP_IDS()) f.spend += n0(v[id]);
+    f.fun += n0(v.fun); f.trip += n0(v.trip);
+  }
+  f.contrib = f.work - f.spend - f.fun - (opt && opt.tripInPort ? 0 : f.trip);
+  return f;
+}
+function reconcile(state, beginSnap, endSnap, opt){
+  const begin = snapTotal(state, beginSnap), end = snapTotal(state, endSnap);
+  const months = monthsBetween(beginSnap.date, endSnap.date);
+  const f = flowsFor(state, months, opt);
+  const gain = end - begin - f.contrib;
+  const base = begin + f.contrib/2;
+  const ret = base ? gain/base : null;
+  const days = (new Date(endSnap.date) - new Date(beginSnap.date))/864e5;
+  const annual = (ret!==null && days>0) ? Math.pow(1+ret, 365/days)-1 : null;
+  return {beginSnap, endSnap, begin, end, months, ...f, gain, invIncome:f.inv, priceGain: gain - f.inv,
+    ret, annual, days, carried:(endSnap.carried||[]).length};
+}
+// เลือกงวดต้น/ปลายตามช่วงเวลา: period = 'YTD' | '3M' | '6M' | '1Y' | '2Y' | '3Y' | 'ALL' | {from:'YYYY-MM-DD', to:'YYYY-MM-DD'}
+function pickPeriod(state, period, opt){
+  const S = liveSnaps(state); if(S.length<2) return null;
+  let endSnap = S[S.length-1], from;
+  if(typeof period==='object'){
+    endSnap = [...S].reverse().find(s=>s.date<=period.to) || S[S.length-1];
+    from = period.from;
+  }else if(period==='ALL'){ from = S[0].date; }
+  else if(period==='YTD'){ from = (Number(endSnap.date.slice(0,4))-1)+'-12-31'; }
+  else{
+    const n = parseInt(period), d = new Date(endSnap.date);
+    if(period.endsWith('M')) d.setMonth(d.getMonth()-n); else d.setFullYear(d.getFullYear()-n);
+    from = d.toISOString().slice(0,10);
+  }
+  // งวดต้น = งวดล่าสุดที่ไม่เกินวันเริ่ม (ถ้าไม่มี ใช้งวดแรก)
+  let beginSnap = [...S].reverse().find(s=>s.date<=from && s.date<endSnap.date) || S[0];
+  if(beginSnap===endSnap) return null;
+  const r = reconcile(state, beginSnap, endSnap, opt);
+  // แยกรายช่วงระหว่างงวด
+  const inner = S.filter(s=>s.date>=beginSnap.date && s.date<=endSnap.date);
+  r.intervals = inner.slice(1).map((s,i)=>reconcile(state, inner[i], s, opt));
+  r.requestedFrom = from;
+  return r;
+}
+
 /* ---------- สถานะ / migrate / merge ---------- */
 const NEW_ACCOUNTS = [
   {id:'sv-bls-cash', n:'เงินสดในพอร์ต BLS', c:'saving'},
@@ -263,7 +327,7 @@ function b64ToUtf8(b){ return _td.decode(_unb64(b.replace(/\n/g,''))); }
 // เพื่อกันหน้าเว็บเวอร์ชันเก่าที่ยังเปิดค้างอยู่เขียนทับแล้วทำข้อมูลใหม่หาย
 const GH = {owner:'tpnaudit', repo:'port-tracker', path:'data2.enc.json', legacyPath:'data.enc.json', branch:'data'};
 
-const api = {CATS, IE, IE_EXP_IDS, defaultIeCfg, ieYear, projectTotals, ieCatalog, srcKey, parseSrc, linkedAmount, lineAct, NEW_ACCOUNTS, migrate, normState,
+const api = {reconcile, pickPeriod, snapTotal, CATS, IE, IE_EXP_IDS, defaultIeCfg, ieYear, projectTotals, ieCatalog, srcKey, parseSrc, linkedAmount, lineAct, NEW_ACCOUNTS, migrate, normState,
   mergeStates, mergeMap, evalExpr, cellVal, encryptJSON, decryptJSON, utf8ToB64, b64ToUtf8, GH, n0};
 root.PortCore = api;
 if(typeof module!=='undefined' && module.exports) module.exports = api;

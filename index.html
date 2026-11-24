@@ -146,6 +146,16 @@ footer{margin-top:28px;color:var(--mute);font-size:12px;text-align:center}
   th,td{padding:7px 9px;font-size:12.5px}
   td.name,th.name{min-width:120px}
 }
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:99px;padding:5px 14px;font:inherit;font-size:13.5px;cursor:pointer}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.chkline{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink);cursor:pointer}
+.warnbox{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13.5px;margin-bottom:14px}
+.warnbox li{margin-left:18px}
+.recon td{text-align:right;padding:7px 4px;border-bottom:1px solid var(--line)}
+.recon td:first-child{text-align:left}
+.recon tr.sum td{font-weight:600;border-top:2px solid var(--line)}
+.recon tr.ind td:first-child{padding-left:18px;color:var(--mute)}
 .ie-grid{display:grid;grid-template-columns:1fr 150px 90px;gap:8px;align-items:center;margin-bottom:6px}
 .ie-grid .b{font-size:11.5px;color:var(--muted);text-align:right}
 .badge{font-size:10.5px;padding:1px 7px;border-radius:20px;border:1px solid var(--line);color:var(--muted);margin-left:6px;white-space:nowrap}
@@ -185,6 +195,7 @@ td.carried{color:var(--warn);background:var(--warn-soft)}
   <nav class="tabs">
     <div class="tab active" data-tab="overview" onclick="switchTab('overview')">ภาพรวม</div>
     <div class="tab" data-tab="table" onclick="switchTab('table')">ตารางพอร์ต</div>
+    <div class="tab" data-tab="ret" onclick="switchTab('ret')">ผลตอบแทนจริง</div>
     <div class="tab" data-tab="ie" onclick="switchTab('ie')">รายรับรายจ่าย</div>
     <div class="tab" data-tab="proj" onclick="switchTab('proj')">Projects</div>
     <div class="tab" data-tab="settings" onclick="switchTab('settings')">ตั้งค่า</div>
@@ -235,6 +246,25 @@ td.carried{color:var(--warn);background:var(--warn-soft)}
   <div id="tab-table" style="display:none">
     <div class="tablewrap" id="bigTable"></div>
     <div id="holdingsBox"></div>
+  </div>
+
+  <div id="tab-ret" style="display:none">
+    <div class="panel" style="margin-bottom:14px">
+      <div class="seg" id="retSeg"></div>
+      <div class="mrow" style="margin:12px 0 0;align-items:center">
+        <div class="field"><label>กำหนดเอง: จาก</label><input type="date" id="retFrom" onchange="retPeriod='CUSTOM';renderRet()"></div>
+        <div class="field"><label>ถึง</label><input type="date" id="retTo" onchange="retPeriod='CUSTOM';renderRet()"></div>
+        <label class="chkline"><input type="checkbox" id="retTrip" onchange="renderRet()"> เงินออมเที่ยวยังอยู่ในบัญชีของพอร์ต</label>
+      </div>
+    </div>
+    <div id="retWarn"></div>
+    <div class="cards" id="retCards"></div>
+    <div class="grid2b">
+      <div class="panel"><h3>Reconcile</h3><div id="retRecon"></div></div>
+      <div class="panel"><h3>พอร์ตโตเพราะอะไร (แต่ละช่วงงวด)</h3><div class="chartbox"><canvas id="chRet"></canvas></div></div>
+    </div>
+    <div class="tablewrap" id="retTable"></div>
+    <div class="hint" style="margin-top:8px">ผลตอบแทนจากการลงทุน = มูลค่าปลายงวด − ต้นงวด − เงินออมที่เติมเข้าพอร์ต (รายได้งาน − รายจ่าย − ฟุ่มเฟือย − ออมเที่ยว) · รวมดอกเบี้ย ปันผล ค่าเช่า และกำไร/ขาดทุนที่ยังไม่ขาย · % คิดแบบ Modified Dietz (กำไร ÷ (ต้นงวด + ครึ่งหนึ่งของเงินที่เติม)) · ใช้งวดพอร์ตที่บันทึกไว้ใกล้วันเริ่มที่สุด</div>
   </div>
 
   <div id="tab-ie" style="display:none">
@@ -552,12 +582,13 @@ function toast(msg){
 /* ================= TABS ================= */
 function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
-  document.getElementById('pageTitle').textContent = {overview:'ภาพรวม',table:'ตารางพอร์ต',ie:'รายรับรายจ่าย',proj:'Projects',settings:'ตั้งค่า'}[id];
-  for(const k of ['overview','table','ie','proj','settings']) document.getElementById('tab-'+k).style.display = k===id?'':'none';
+  document.getElementById('pageTitle').textContent = {overview:'ภาพรวม',table:'ตารางพอร์ต',ret:'ผลตอบแทนจริง',ie:'รายรับรายจ่าย',proj:'Projects',settings:'ตั้งค่า'}[id];
+  for(const k of ['overview','table','ret','ie','proj','settings']) document.getElementById('tab-'+k).style.display = k===id?'':'none';
   if(id==='overview') renderOverview();
   if(id==='table') renderTable();
   if(id==='settings') renderSettings();
   if(id==='ie') renderIE();
+  if(id==='ret') renderRet();
   if(id==='proj') renderProjects();
 }
 
@@ -1191,6 +1222,65 @@ function deleteProject(){
 document.getElementById('ieOverlay').addEventListener('click', e=>{ if(e.target.id==='ieOverlay') closeOv('ieOverlay'); });
 document.getElementById('projOverlay').addEventListener('click', e=>{ if(e.target.id==='projOverlay') closeOv('projOverlay'); });
 
+
+/* ================= ผลตอบแทนจริง ================= */
+let retPeriod = 'YTD';
+const RET_P = [['YTD','YTD'],['3M','3 เดือน'],['6M','6 เดือน'],['1Y','1 ปี'],['2Y','2 ปี'],['3Y','3 ปี'],['ALL','ทั้งหมด']];
+function setRetPeriod(p){ retPeriod = p; renderRet(); }
+function renderRet(){
+  if(!state || !document.getElementById('retSeg')) return;
+  document.getElementById('retSeg').innerHTML = RET_P.map(([k,l])=>`<button class="${retPeriod===k?'on':''}" onclick="setRetPeriod('${k}')">${l}</button>`).join('') +
+    `<button class="${retPeriod==='CUSTOM'?'on':''}" onclick="setRetPeriod('CUSTOM')">กำหนดเอง</button>`;
+  const opt = {tripInPort: document.getElementById('retTrip').checked};
+  let period = retPeriod;
+  if(retPeriod==='CUSTOM'){
+    const f = document.getElementById('retFrom').value, t = document.getElementById('retTo').value;
+    if(!f){ document.getElementById('retCards').innerHTML = '<div class="mut">เลือกวันเริ่มต้น</div>'; return; }
+    period = {from:f, to:t||'9999-12-31'};
+  }
+  const r = PortCore.pickPeriod(state, period, opt);
+  if(!r){ document.getElementById('retCards').innerHTML = '<div class="mut">ต้องมีงวดพอร์ตอย่างน้อย 2 งวด</div>'; return; }
+  // คำเตือนความครบถ้วน
+  const W = [];
+  if(r.requestedFrom && Math.abs(new Date(r.beginSnap.date)-new Date(r.requestedFrom))/864e5 > 20)
+    W.push(`ไม่มีงวดพอร์ตตรงวันเริ่ม (${thDate(r.requestedFrom)}) — ใช้งวด ${thDate(r.beginSnap.date)} แทน`);
+  if(r.missing.length) W.push(`ยังไม่มีรายรับรายจ่าย ${r.missing.length} เดือน: ${r.missing.map(k=>MN[Number(k.slice(5))-1]+' '+String(Number(k.slice(0,4))+543).slice(-2)).join(', ')} — เงินที่เติมในเดือนเหล่านี้จะถูกนับเป็นผลตอบแทน`);
+  if(r.carried) W.push(`งวด ${thDate(r.endSnap.date)} ยังมี ${r.carried} บัญชีที่ยกยอดมา (ยังไม่อัปเดต)`);
+  document.getElementById('retWarn').innerHTML = W.length ? `<div class="warnbox"><b>ตัวเลขอาจยังไม่ครบ</b><ul>${W.map(w=>`<li>${w}</li>`).join('')}</ul></div>` : '';
+  const pct = x => x==null ? '—' : fmtPct(x, 2);
+  document.getElementById('retCards').innerHTML = [
+    {l:`ผลตอบแทนจริง (${thDate(r.beginSnap.date)} – ${thDate(r.endSnap.date)})`, v:pct(r.ret), d: r.days>=360 ? `ต่อปี ${pct(r.annual)}` : `${Math.round(r.days)} วัน · คิดเป็นต่อปี ${pct(r.annual)}`, c:r.ret>=0?'pos':'neg'},
+    {l:'กำไรจากการลงทุน', v:'฿'+fmt(r.gain), d:`ปันผล/ดอกเบี้ย/ค่าเช่า ฿${fmt(r.inv)} · ราคา ฿${fmt(r.priceGain)}`, c:r.gain>=0?'pos':'neg'},
+    {l:'เงินออมที่เติมเข้าพอร์ต', v:'฿'+fmt(r.contrib), d:`รายได้งาน ฿${fmt(r.work)} − ใช้จ่าย ฿${fmt(r.spend+r.fun+(opt.tripInPort?0:r.trip))}`, c:'pos'},
+    {l:'พอร์ตโตขึ้น', v:'฿'+fmt(r.end-r.begin), d: (r.end-r.begin) ? `จากเงินออม ${Math.round(r.contrib/(r.end-r.begin)*100)}% · จากการลงทุน ${Math.round(r.gain/(r.end-r.begin)*100)}%` : '', c:(r.end-r.begin)>=0?'pos':'neg'},
+  ].map(c=>`<div class="card"><div class="lbl">${c.l}</div><div class="val ${c.c}">${c.v}</div><div class="delta">${c.d}</div></div>`).join('');
+  const row = (l,v,cls='') => `<tr class="${cls}"><td>${l}</td><td>${v===''?'':fmt(v)}</td></tr>`;
+  document.getElementById('retRecon').innerHTML = `<table class="recon">
+    ${row('มูลค่าพอร์ตต้นงวด · '+thDate(r.beginSnap.date), r.begin)}
+    ${row('รายได้งาน (วิชาชีพ, นายหน้า, คืนภาษี, อื่น)', r.work, 'ind')}
+    ${row('หัก รายจ่ายประจำและรายปี', -r.spend, 'ind')}
+    ${row('หัก ฟุ่มเฟือย', -r.fun, 'ind')}
+    ${opt.tripInPort ? '' : row('หัก ออมเงินเที่ยว (ออกจากพอร์ต)', -r.trip, 'ind')}
+    ${row('เงินออมที่เติมเข้าพอร์ต', r.contrib, 'sum')}
+    ${row('ปันผล ดอกเบี้ย ค่าเช่า', r.inv, 'ind')}
+    ${row('กำไร/ขาดทุนจากราคา (ยังไม่ขาย)', r.priceGain, 'ind')}
+    ${row('ผลตอบแทนจากการลงทุน', r.gain, 'sum')}
+    ${row('มูลค่าพอร์ตปลายงวด · '+thDate(r.endSnap.date), r.end, 'sum')}
+  </table>`;
+  const I = r.intervals;
+  mkChart('chRet',{type:'bar',data:{labels:I.map(x=>thDate(x.endSnap.date)),datasets:[
+      {label:'เงินออมที่เติม',data:I.map(x=>x.missing.length===x.months.length&&x.months.length?null:x.contrib),backgroundColor:'#7aa6c2',borderRadius:4},
+      {label:'ผลตอบแทนการลงทุน',data:I.map(x=>x.gain),backgroundColor:I.map(x=>x.gain>=0?'#0d7a6b':'#d9534f'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:CH.ink,boxWidth:12}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' ฿'+nf.format(c.raw)}}},
+      scales:{x:{ticks:{color:CH.tick,font:{size:10}},grid:{display:false}},y:{ticks:{color:CH.tick,callback:v=>nf.format(v),font:{size:10}},grid:{color:CH.grid}}}}});
+  document.getElementById('retTable').innerHTML = `<table><thead><tr><th class="name">ช่วง</th><th>ต้นงวด</th><th>เงินออมที่เติม</th><th>ปันผล/ดอกเบี้ย/เช่า</th><th>ผลตอบแทน</th><th>%</th><th>ปลายงวด</th><th>รายรับรายจ่าย</th></tr></thead><tbody>`+
+    I.map(x=>{const none = x.months.length && x.missing.length===x.months.length;
+      return `<tr><td class="name">${thDate(x.beginSnap.date)} – ${thDate(x.endSnap.date)}</td><td>${fmt(x.begin)}</td><td>${none?'<span class="mut">—</span>':fmt(x.contrib)}</td><td>${fmt(x.inv)}</td>
+      <td class="${x.gain>=0?'pos':'neg'}">${fmt(x.gain)}</td><td class="${x.gain>=0?'pos':'neg'}">${pct(x.ret)}</td><td>${fmt(x.end)}</td>
+      <td>${!x.months.length?'<span class="mut">เดือนเดียวกัน</span>':none?'<span class="badge warn">ไม่มีข้อมูล</span>':x.missing.length?`<span class="badge warn">ขาด ${x.missing.length} เดือน</span>`:'<span class="badge">ครบ</span>'}</td></tr>`}).join('')+
+    `</tbody></table>`;
+}
+
 /* ================= ช่องตัวเลข: ใส่ลูกน้ำ ================= */
 // ตัวเลขล้วนแสดงแบบมีลูกน้ำ ส่วนสูตร (เช่น 5*63170+3*60000) แสดงตามที่พิมพ์
 function fmtIn(x){
@@ -1218,7 +1308,7 @@ async function openNewSnapshot(){
 }
 
 /* ================= INIT ================= */
-function renderAll(){ renderOverview(); renderTable(); renderSettings(); renderIE(); renderProjects(); }
+function renderAll(){ renderOverview(); renderTable(); renderSettings(); renderIE(); renderProjects(); if(document.getElementById('tab-ret').style.display!=='none') renderRet(); }
 document.getElementById('editorOverlay').addEventListener('click', e=>{ if(e.target.id==='editorOverlay') closeEditor(); });
 async function unlockSeed(){
   const pin = document.getElementById('pinInput').value.trim();
