@@ -115,15 +115,51 @@ function ieYear(state, year){
 }
 
 /* ---------- Projects ---------- */
-function projectTotals(p){
+/* หมวดที่บันทึกไว้ (ให้ Project ลิงก์ยอดได้)
+   raw = ชื่อหมวดตามแอปจดรายจ่าย (เก็บไว้ใน ie[เดือน].raw = {inc:{ชื่อ:ยอด}, exp:{…}})
+   id  = หมวดของเว็บ (ใช้ได้ทุกเดือน รวมเดือนที่มาจาก Excel) */
+function ieCatalog(state){
+  const raw = {inc:{}, exp:{}};
+  for(const [k,rec] of Object.entries(state.ie||{})){
+    if(!rec || rec.deleted || !rec.raw) continue;
+    for(const kind of ['inc','exp']) for(const n of Object.keys(rec.raw[kind]||{})) raw[kind][n] = (raw[kind][n]||0)+1;
+  }
+  const ids = [...IE.income.map(x=>({kind:'inc', id:x.id, n:x.n})),
+    ...[...IE.monthly, ...IE.annual.filter(a=>!a.subs), ...IE.unplanSubs, IE.fun, IE.trip].map(x=>({kind:'exp', id:x.id, n:x.n}))];
+  return {raw, ids};
+}
+function srcKey(src){ return !src ? '' : src.t==='raw' ? 'raw|'+src.k+'|'+src.n : 'id|'+src.id; }
+function parseSrc(v){
+  if(!v) return null;
+  const [t,a,...rest] = v.split('|');
+  return t==='raw' ? {t:'raw', k:a, n:rest.join('|')} : {t:'id', id:a};
+}
+function linkedAmount(state, src, from, to){
+  let sum = 0, months = 0;
+  for(const [k,rec] of Object.entries(state.ie||{})){
+    if(!rec || rec.deleted) continue;
+    if(from && k < from) continue;
+    if(to && k > to) continue;
+    const x = src.t==='raw' ? n0(rec.raw && rec.raw[src.k] && rec.raw[src.k][src.n]) : n0(rec.v && rec.v[src.id]);
+    if(x){ sum += x; months++; }
+  }
+  return {sum, months};
+}
+// ยอดจริงของบรรทัด: ถ้าลิงก์หมวดไว้ ดึงจากรายรับรายจ่ายในช่วงเดือนของ Project
+function lineAct(state, p, l){
+  if(l.src && state) return linkedAmount(state, l.src, p.from, p.to).sum;
+  return l.act;
+}
+function projectTotals(p, state){
   const t = {incEst:0, incAct:0, expEst:0, expAct:0, due:0, receivable:0};
-  for(const l of (p.lines||[])){
+  const lines = (p.lines||[]).map(l=>({...l, act: lineAct(state, p, l)}));
+  for(const l of lines){
     const est = n0(l.est), act = n0(l.act);
     if(l.kind==='inc'){ t.incEst += est; t.incAct += act; if(l.st==='due') t.receivable += act||est; }
     else { t.expEst += est; t.expAct += act; if(l.st==='due') t.due += act||est; }
   }
   // กำไรตามเกณฑ์คงค้าง: รายการที่ยังไม่มียอดจริงใช้ยอดประมาณการ
-  const accr = (p.lines||[]).reduce((s,l)=>{
+  const accr = lines.reduce((s,l)=>{
     const val = (l.act!==undefined && l.act!=='' && l.act!==null) ? n0(l.act) : n0(l.est);
     return s + (l.kind==='inc' ? val : -val);
   },0);
@@ -227,7 +263,7 @@ function b64ToUtf8(b){ return _td.decode(_unb64(b.replace(/\n/g,''))); }
 // เพื่อกันหน้าเว็บเวอร์ชันเก่าที่ยังเปิดค้างอยู่เขียนทับแล้วทำข้อมูลใหม่หาย
 const GH = {owner:'tpnaudit', repo:'port-tracker', path:'data2.enc.json', legacyPath:'data.enc.json', branch:'data'};
 
-const api = {CATS, IE, IE_EXP_IDS, defaultIeCfg, ieYear, projectTotals, NEW_ACCOUNTS, migrate, normState,
+const api = {CATS, IE, IE_EXP_IDS, defaultIeCfg, ieYear, projectTotals, ieCatalog, srcKey, parseSrc, linkedAmount, lineAct, NEW_ACCOUNTS, migrate, normState,
   mergeStates, mergeMap, evalExpr, cellVal, encryptJSON, decryptJSON, utf8ToB64, b64ToUtf8, GH, n0};
 root.PortCore = api;
 if(typeof module!=='undefined' && module.exports) module.exports = api;

@@ -109,15 +109,25 @@ function applyPatch(s, p){
   for(const [k,rec] of Object.entries(p.ie||{})){
     if(!/^\d{4}-\d{2}$/.test(k)) throw new Error('เดือนต้องเป็น YYYY-MM: '+k);
     const ids = new Set([...C.IE_EXP_IDS(), ...C.IE.income.map(i=>i.id), 'fun', 'trip']);
+    if(rec.raw && !rec.v){
+      // ชื่อหมวดตามแอป → หมวดเว็บ ด้วย appMap (หมวดที่ไม่รู้จัก = หยุด ให้ถาม user แล้วเพิ่ม appMap ก่อน)
+      const map = {...C.defaultIeCfg().appMap, ...((s.ieCfg||{}).appMap||{})}, v = {}, unknown = [];
+      for(const kind of ['inc','exp']) for(const [n,x] of Object.entries(rec.raw[kind]||{})){
+        const id = map[n]; if(!id){ unknown.push(kind+':'+n); continue; }
+        v[id] = Math.round(((v[id]||0) + Number(x))*100)/100;
+      }
+      if(unknown.length) throw new Error('หมวดที่ยังไม่มีใน appMap ('+k+'): '+unknown.join(', '));
+      rec.v = v;
+    }
     for(const id of Object.keys(rec.v||{})) if(!ids.has(id)) throw new Error('ไม่รู้จักหมวด '+id+' ใน '+k);
-    s.ie[k] = {v:rec.v, src:rec.src||'', note:rec.note||'', updatedAt:now};
+    s.ie[k] = {v:rec.v, ...(rec.raw?{raw:rec.raw}:{}), src:rec.src||'', note:rec.note||'', updatedAt:now};
     const y = C.ieYear(s, Number(k.slice(0,4))).months.find(m=>m.key===k);
     log.push(`รายรับรายจ่าย ${k}: รับ ${fmt(y.income)} · จ่าย ${fmt(y.expense)} · ฟุ่มเฟือย ${fmt(y.funAct)} (งบคงเหลือ ${fmt(y.diff)}) · ออมเที่ยว ${fmt(y.trip)}`);
   }
   for(const [id,pr] of Object.entries(p.projects||{})){
     const old = s.projects[id] || {};
     s.projects[id] = {...old, ...pr, id, updatedAt:now};
-    const t = C.projectTotals(s.projects[id]);
+    const t = C.projectTotals(s.projects[id], s);
     log.push(`Project ${pr.name||old.name}: รายได้ ${fmt(t.incAct||t.incEst)} · กำไร ${fmt(t.profit)} · ค้างจ่าย ${fmt(t.due)}`);
   }
   return log;

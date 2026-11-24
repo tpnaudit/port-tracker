@@ -163,15 +163,17 @@ footer{margin-top:28px;color:var(--mute);font-size:12px;text-align:center}
 .pj-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .pj-stats div .l{font-size:11.5px;color:var(--muted)}
 .pj-stats div .v{font-size:16px;font-weight:600}
-.pj-line{display:grid;grid-template-columns:1.6fr 110px 110px 110px 120px 28px;gap:7px;align-items:center;margin-bottom:6px}
+.linked{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--acc);line-height:1.2}
+.linked .hint{font-weight:400;margin:0}
+.pj-line{display:grid;grid-template-columns:1.3fr 1.2fr 105px 105px 110px 120px 28px;gap:7px;align-items:center;margin-bottom:6px}
 .pj-line input,.pj-line select{width:100%}
 .pj-sec{font-size:12.5px;color:var(--muted);margin:12px 0 6px}
 td.carried{color:var(--warn);background:var(--warn-soft)}
 .prev{font-size:11px;color:var(--muted);text-align:right}
 .prev.big{color:var(--warn);font-weight:500}
 @media(max-width:760px){
-  .pj-line{grid-template-columns:1fr 1fr 28px}
-  .pj-line > :nth-child(1){grid-column:1 / span 2}
+  .pj-line{grid-template-columns:1fr 1fr 28px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .pj-line > :nth-child(1),.pj-line > :nth-child(2){grid-column:1 / span 2}
   .ie-grid{grid-template-columns:1fr 120px}
   .ie-grid .b{grid-column:1 / span 2;text-align:left;margin-top:-4px}
 }
@@ -344,6 +346,7 @@ td.carried{color:var(--warn);background:var(--warn-soft)}
     <div class="mrow">
       <div class="field" style="flex:1;min-width:200px"><label>ชื่อ</label><input id="pjName"></div>
       <div class="field"><label>วันที่จัด</label><input type="date" id="pjDate"></div>
+      <div class="field"><label>ช่วงเดือน (สำหรับหมวดที่ลิงก์)</label><div class="fxline"><input type="month" id="pjFrom" onchange="pjDraft.from=this.value;renderPjLines()"><span class="mut">ถึง</span><input type="month" id="pjTo" onchange="pjDraft.to=this.value;renderPjLines()"></div></div>
       <div class="field"><label>สถานะ</label><select id="pjStatus"><option value="open">กำลังทำ</option><option value="closed">ปิดแล้ว</option></select></div>
     </div>
     <div id="pjLines"></div>
@@ -1068,7 +1071,7 @@ function saveIeMonth(){
   if(!ieKey && state.ie[k] && !state.ie[k].deleted && !confirm('เดือนนี้มีข้อมูลอยู่แล้ว — บันทึกทับ?')) return;
   if(ieKey && ieKey!==k) state.ie[ieKey] = {deleted:true, updatedAt:Date.now()};
   const old = state.ie[k] && !state.ie[k].deleted ? state.ie[k] : {};
-  state.ie[k] = {v, src: old.src||'กรอกเอง', updatedAt: Date.now()};
+  state.ie[k] = {v, ...(old.raw?{raw:old.raw}:{}), src: old.src||'กรอกเอง', updatedAt: Date.now()};
   save(); closeOv('ieOverlay');
   const sel = document.getElementById('ieYear'); sel.innerHTML = `<option value="${k.slice(0,4)}" selected></option>`;
   renderIE(); toast('บันทึกแล้ว');
@@ -1095,7 +1098,7 @@ function renderProjects(){
   const L = projList();
   if(!L.length){ box.innerHTML = '<div class="panel mut">ยังไม่มี Project — กด "Project ใหม่"</div>'; return; }
   box.innerHTML = L.map(p=>{
-    const t = PortCore.projectTotals(p);
+    const t = PortCore.projectTotals(p, state);
     const dues = (p.lines||[]).filter(l=>l.st==='due');
     return `<div class="pj-card" onclick="openProject('${p.id}')">
       <div class="pj-head"><b>${esc(p.name)}</b><span class="mut">${p.date?thDate(p.date):''}</span>
@@ -1126,16 +1129,20 @@ function fillProject(){
   document.getElementById('pjDate').value = pjDraft.date||'';
   document.getElementById('pjStatus').value = pjDraft.status||'open';
   document.getElementById('pjNote').value = pjDraft.note||'';
+  document.getElementById('pjFrom').value = pjDraft.from||'';
+  document.getElementById('pjTo').value = pjDraft.to||'';
   renderPjLines();
   document.getElementById('projOverlay').classList.add('open');
 }
 function renderPjLines(){
   const sec = (kind, title) => `<div class="pj-sec">${title}</div>
-    <div class="pj-line acc-legend" style="color:var(--muted);font-size:11px"><div>รายการ</div><div>ประมาณการ</div><div>ยอดจริง</div><div>สถานะ</div><div>ครบกำหนด</div><div></div></div>` +
+    <div class="pj-line acc-legend" style="color:var(--muted);font-size:11px"><div>รายการ</div><div>ดึงยอดจริงจากหมวด</div><div>ประมาณการ</div><div>ยอดจริง</div><div>สถานะ</div><div>ครบกำหนด</div><div></div></div>` +
     pjDraft.lines.filter(l=>l.kind===kind).map(l=>`<div class="pj-line">
       <input value="${esc(l.n)}" placeholder="ชื่อรายการ" oninput="pjSet('${l.id}','n',this.value)">
+      <select onchange="pjSetSrc('${l.id}',this.value)" title="เลือกหมวดที่บันทึกไว้ ยอดจริงจะดึงมาเอง">${srcOptions(kind, l.src)}</select>
       <input class="num" style="width:100%" value="${fmtIn(l.est)}" placeholder="ประมาณการ" inputmode="decimal" oninput="pjSet('${l.id}','est',this.value)">
-      <input class="num" style="width:100%" value="${fmtIn(l.act)}" placeholder="ยอดจริง" inputmode="decimal" oninput="pjSet('${l.id}','act',this.value)">
+      ${l.src ? (()=>{ const r = PortCore.linkedAmount(state, l.src, pjDraft.from, pjDraft.to); return `<div class="linked" title="รวม ${r.months} เดือน">${fmt(r.sum)}<div class="hint">${r.months} เดือน</div></div>`; })()
+        : `<input class="num" style="width:100%" value="${fmtIn(l.act)}" placeholder="ยอดจริง" inputmode="decimal" oninput="pjSet('${l.id}','act',this.value)">`}
       <select onchange="pjSet('${l.id}','st',this.value)">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${l.st===k?'selected':''}>${k==='due'?(kind==='inc'?'ค้างรับ':'ค้างจ่าย'):k==='paid'?(kind==='inc'?'รับแล้ว':'จ่ายแล้ว'):v}</option>`).join('')}</select>
       <input type="date" value="${l.due||''}" oninput="pjSet('${l.id}','due',this.value)">
       <button class="iconbtn" title="ลบ" onclick="pjDel('${l.id}')">✕</button></div>`).join('');
@@ -1144,10 +1151,25 @@ function renderPjLines(){
 }
 function pjNum(x){ if(String(x).trim()==='') return ''; const v = evalExpr(x); return isNaN(v)?'':v; }
 function pjSet(id,f,v){ const l = pjDraft.lines.find(x=>x.id===id); l[f] = (f==='est'||f==='act') ? pjNum(v) : v; if(f!=='n') pjSum(); }
+function srcOptions(kind, src){
+  const C = PortCore.ieCatalog(state), cur = PortCore.srcKey(src);
+  const raw = Object.keys(C.raw[kind]).sort((a,b)=>a.localeCompare(b,'th'));
+  const opt = (v,label) => `<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(label)}</option>`;
+  return opt('', 'พิมพ์ยอดเอง') +
+    (raw.length ? `<optgroup label="หมวดในแอปจดรายจ่าย">${raw.map(n=>opt('raw|'+kind+'|'+n, n)).join('')}</optgroup>` : '') +
+    `<optgroup label="หมวดในเว็บ (รวมเดือนจาก Excel)">${C.ids.filter(x=>x.kind===kind).map(x=>opt('id|'+x.id, x.n)).join('')}</optgroup>`;
+}
+function pjSetSrc(id, v){
+  const l = pjDraft.lines.find(x=>x.id===id);
+  l.src = PortCore.parseSrc(v);
+  if(!l.src) delete l.src;
+  if(l.src && !l.n){ l.n = l.src.t==='raw' ? l.src.n : (PortCore.ieCatalog(state).ids.find(x=>x.id===l.src.id)||{}).n||''; }
+  renderPjLines();
+}
 function pjDel(id){ pjDraft.lines = pjDraft.lines.filter(x=>x.id!==id); renderPjLines(); }
 function pjAddLine(kind){ pjDraft.lines.push({id:'l'+Date.now().toString(36),kind,n:'',est:'',act:'',st:'plan'}); renderPjLines(); }
 function pjSum(){
-  const t = PortCore.projectTotals(pjDraft);
+  const t = PortCore.projectTotals(pjDraft, state);
   document.getElementById('pjSum').innerHTML = `กำไร <b class="${t.profit>=0?'pos':'neg'}">฿${fmt(t.profit)}</b> · ประมาณการ ฿${fmt(t.profitEst)} · ค้างจ่าย ฿${fmt(t.due)}`;
 }
 function saveProject(){
