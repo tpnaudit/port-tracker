@@ -175,7 +175,7 @@ td.carried{color:var(--gold)}
     <button class="btn" onclick="exportJSON()">⬇ สำรองข้อมูล</button>
     <button class="btn" onclick="document.getElementById('importFile').click()">⬆ นำเข้า</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
-    <button class="btn primary" onclick="openEditor(null)">＋ อัปเดตพอร์ต</button>
+    <button class="btn primary" onclick="openNewSnapshot()">＋ อัปเดตพอร์ต</button>
   </header>
 
   <div class="tabs">
@@ -763,8 +763,8 @@ function renderEditorGroups(){
         const c = draft.v[a.id]||{};
         return `<div class="acc-grid">
           <div>${a.n}${(draft.carried||[]).includes(a.id)?'<span class="badge warn" id="cb-'+a.id+'">ยกยอด</span>':''}<div class="prev" id="pv-${a.id}"></div></div>
-          <input data-acc="${a.id}" data-f="t" value="${c.t??''}" placeholder="บาท" inputmode="text" oninput="onCellInput(this)">
-          <input data-acc="${a.id}" data-f="u" value="${c.u??''}" placeholder="USD" inputmode="text" oninput="onCellInput(this)">
+          <input data-acc="${a.id}" data-f="t" value="${fmtIn(c.t)}" placeholder="บาท" inputmode="text" oninput="onCellInput(this)">
+          <input data-acc="${a.id}" data-f="u" value="${fmtIn(c.u)}" placeholder="USD" inputmode="text" oninput="onCellInput(this)">
           <div class="cv" id="cv-${a.id}"></div>
           <button class="iconbtn" title="ล้างค่า" onclick="clearCell('${a.id}')">✕</button>
         </div>`;
@@ -777,7 +777,8 @@ function renderEditorGroups(){
 function onCellInput(el){
   const acc = el.dataset.acc, f = el.dataset.f;
   if(!draft.v[acc]) draft.v[acc] = {};
-  if(el.value.trim()==='') delete draft.v[acc][f]; else draft.v[acc][f] = el.value;
+  const raw = el.value.replace(/,/g,'').trim();
+  if(raw==='') delete draft.v[acc][f]; else draft.v[acc][f] = raw;
   if(!draft.v[acc].t && !draft.v[acc].u) delete draft.v[acc];
   el.classList.toggle('err', isNaN(evalExpr(el.value)));
   draft.carried = (draft.carried||[]).filter(x=>x!==acc);
@@ -1019,7 +1020,7 @@ function openIeEditor(key){
   for(const c of IE_ALL()){
     if(c.grp!==g){ if(g) html += '</div>'; g = c.grp; html += `<div class="groupbox"><div class="grouphead"><b>${grpN[g]}</b></div>`; }
     html += `<div class="ie-grid"><div>${c.n}${c.tax?'<span class="badge">'+c.tax+'</span>':''}</div>
-      <input class="num" style="width:100%" data-ie="${c.id}" value="${v[c.id]??''}" inputmode="decimal" oninput="ieSum()">
+      <input class="num" style="width:100%" data-ie="${c.id}" value="${fmtIn(v[c.id])}" inputmode="decimal" oninput="ieSum()">
       <div class="b">${B[c.id]?'งบ '+fmt(B[c.id]):''}</div></div>`;
   }
   document.getElementById('ieFields').innerHTML = html + '</div>';
@@ -1113,8 +1114,8 @@ function renderPjLines(){
     <div class="pj-line acc-legend" style="color:var(--muted);font-size:11px"><div>รายการ</div><div>ประมาณการ</div><div>ยอดจริง</div><div>สถานะ</div><div>ครบกำหนด</div><div></div></div>` +
     pjDraft.lines.filter(l=>l.kind===kind).map(l=>`<div class="pj-line">
       <input value="${esc(l.n)}" placeholder="ชื่อรายการ" oninput="pjSet('${l.id}','n',this.value)">
-      <input class="num" style="width:100%" value="${l.est??''}" placeholder="ประมาณการ" inputmode="decimal" oninput="pjSet('${l.id}','est',this.value)">
-      <input class="num" style="width:100%" value="${l.act??''}" placeholder="ยอดจริง" inputmode="decimal" oninput="pjSet('${l.id}','act',this.value)">
+      <input class="num" style="width:100%" value="${fmtIn(l.est)}" placeholder="ประมาณการ" inputmode="decimal" oninput="pjSet('${l.id}','est',this.value)">
+      <input class="num" style="width:100%" value="${fmtIn(l.act)}" placeholder="ยอดจริง" inputmode="decimal" oninput="pjSet('${l.id}','act',this.value)">
       <select onchange="pjSet('${l.id}','st',this.value)">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${l.st===k?'selected':''}>${k==='due'?(kind==='inc'?'ค้างรับ':'ค้างจ่าย'):k==='paid'?(kind==='inc'?'รับแล้ว':'จ่ายแล้ว'):v}</option>`).join('')}</select>
       <input type="date" value="${l.due||''}" oninput="pjSet('${l.id}','due',this.value)">
       <button class="iconbtn" title="ลบ" onclick="pjDel('${l.id}')">✕</button></div>`).join('');
@@ -1147,6 +1148,32 @@ function deleteProject(){
 }
 document.getElementById('ieOverlay').addEventListener('click', e=>{ if(e.target.id==='ieOverlay') closeOv('ieOverlay'); });
 document.getElementById('projOverlay').addEventListener('click', e=>{ if(e.target.id==='projOverlay') closeOv('projOverlay'); });
+
+/* ================= ช่องตัวเลข: ใส่ลูกน้ำ ================= */
+// ตัวเลขล้วนแสดงแบบมีลูกน้ำ ส่วนสูตร (เช่น 5*63170+3*60000) แสดงตามที่พิมพ์
+function fmtIn(x){
+  if(x===undefined || x===null || x==='') return '';
+  const s = String(x).replace(/,/g,'').trim();
+  if(!/^-?\d+(\.\d+)?$/.test(s)) return String(x);
+  const [i, d] = s.split('.');
+  return Number(i).toLocaleString('en-US') + (d!==undefined ? '.'+d : '');
+}
+document.addEventListener('focusout', e=>{
+  const el = e.target;
+  if(el.tagName!=='INPUT' || !(el.dataset.acc || el.dataset.ie || el.classList.contains('num'))) return;
+  if(el.type!=='text' && el.type!=='') return;
+  const f = fmtIn(el.value); if(f!==el.value) el.value = f;
+});
+
+/* ปุ่มอัปเดตพอร์ต: ซิงก์ก่อน แล้วถ้ามีงวดของวันนี้อยู่แล้วให้เปิดแก้งวดนั้น (กันงวดใหม่ทับข้อมูลที่เพิ่งลงจากเครื่องอื่น) */
+async function openNewSnapshot(){
+  const cfg = getSyncCfg();
+  if(cfg && cfg.token && Date.now()-(cfg.lastSync||0) > 30000){ toast('กำลังซิงก์ข้อมูลล่าสุดก่อน…'); await ghSyncNow(); }
+  const snaps = sortedSnaps(), today = new Date().toISOString().slice(0,10);
+  const i = snaps.findIndex(s=>s.date===today);
+  openEditor(i>=0 ? i : null);
+  if(i>=0) toast('มีงวดของวันนี้แล้ว — เปิดแก้งวดนี้แทน');
+}
 
 /* ================= INIT ================= */
 function renderAll(){ renderOverview(); renderTable(); renderSettings(); renderIE(); renderProjects(); }

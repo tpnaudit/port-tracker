@@ -186,7 +186,7 @@ function mergeStates(a, b){
 /* ---------- ค่าในงวด ---------- */
 function evalExpr(s){
   if(s===undefined || s===null) return 0;
-  s = String(s).trim(); if(s==='') return 0;
+  s = String(s).replace(/,/g,'').trim(); if(s==='') return 0;
   if(!/^[0-9+\-*/(). ]+$/.test(s)) return NaN;
   try{ const v = Function('"use strict";return('+s+')')(); return (typeof v==='number' && isFinite(v)) ? v : NaN; }catch(e){ return NaN; }
 }
