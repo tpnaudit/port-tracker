@@ -233,6 +233,128 @@ function pickPeriod(state, period, opt){
   return r;
 }
 
+/* ---------- แผนการเงินระยะยาว (สูตรเดียวกับชีต budget_set_2026) ----------
+   ปลายปี = ต้นปี × (1+ผลตอบแทน) + รายได้ − รายจ่าย − ฟุ่มเฟือย + รายการก้อน
+   รายจ่ายโตตามเงินเฟ้อทุกปี · ฟุ่มเฟือย = % ของรายได้ (ถ้าพอร์ตต้นปีเกินเกณฑ์ ใช้อีก %)
+   จุดอิสรภาพทางการเงิน = ปีแรกที่พอร์ตต้นปี ≥ รายจ่ายปีนั้น ÷ (ผลตอบแทน − เงินเฟ้อ)
+   (ผลตอบแทนจ่ายค่าใช้จ่ายได้ และพอร์ตยังโตทันเงินเฟ้อ = อยู่ได้ตลอดไปโดยไม่ต้องทำงาน) */
+const PLAN_ONEOFFS = [[28,-40000,'มือถือ'],[32,-500000,'รถ'],[33,-40000,'มือถือ'],[38,-40000,'มือถือ'],[43,-40000,'มือถือ'],
+  [45,-600000,'รถ'],[48,-40000,'มือถือ'],[53,-40000,'มือถือ'],[58,-40000,'มือถือ'],[60,-700000,'รถ'],[63,-40000,'มือถือ'],
+  [68,-40000,'มือถือ'],[73,-40000,'มือถือ'],[78,-40000,'มือถือ']];
+function defaultPlan(){
+  return {id:'main', name:'แผนหลัก', main:true, updatedAt:0,
+    a:{birthYear:1999, startYear:2026, startBal:7150000, useActual:true, exRe:false,
+       ret:5, inf:2, income:1000000, incomeGrowth:0, retireAge:36, pension:22800, pensionAge:56,
+       expense:357000, funRate:15, richRate:50, richAt:30000000, endAge:100},
+    oneoffs: PLAN_ONEOFFS.map(([age,amt,n],i)=>({id:'o'+i, age, amt, n})),
+    rules: []};
+}
+const PLAN_WHAT = {income:'รายได้', expense:'รายจ่าย', ret:'ผลตอบแทน %', inf:'เงินเฟ้อ %'};
+function ruleAdj(rules, what, age, base){
+  let x = base;
+  for(const r of rules||[]){
+    if(r.what!==what) continue;
+    const from = (r.from===''||r.from==null) ? -Infinity : n0(r.from);
+    const to = (r.to===''||r.to==null) ? Infinity : n0(r.to);
+    if(age<from || age>to) continue;
+    const v = n0(r.v);
+    if(r.how==='set') x = v; else if(r.how==='pct') x = x*(1+v/100); else x = x + v;
+  }
+  return x;
+}
+// ctx = {actualDate, actualTotal, actualExRe} ยอดพอร์ตจริงล่าสุด (ใช้เมื่อ a.useActual)
+function planProject(plan, ctx, over){
+  const a = {...plan.a, ...(over||{})}, rules = plan.rules||[];
+  const oneoff = {};
+  for(const o of plan.oneoffs||[]) oneoff[n0(o.age)] = (oneoff[n0(o.age)]||0) + n0(o.amt);
+  const startYear = n0(a.startYear), birth = n0(a.birthYear);
+  let bal = n0(a.startBal), firstYear = startYear;
+  if(a.useActual && ctx && ctx.actualDate){
+    const y = Number(ctx.actualDate.slice(0,4)), m = Number(ctx.actualDate.slice(5,7));
+    firstYear = Math.max(startYear, m>=10 ? y+1 : y);   // งวด ต.ค.–ธ.ค. ถือเป็นยอดต้นปีถัดไป
+    bal = a.exRe ? n0(ctx.actualExRe) : n0(ctx.actualTotal);
+  }
+  const rows = [];
+  let exp = n0(a.expense);
+  for(let y=startYear; y<=birth+n0(a.endAge); y++){
+    const age = y - birth;
+    const inf = ruleAdj(rules,'inf',age,n0(a.inf))/100;
+    if(y>startYear) exp = exp*(1+inf);
+    if(y<firstYear) continue;
+    const r = ruleAdj(rules,'ret',age,n0(a.ret))/100;
+    const work = age < n0(a.retireAge) ? n0(a.income)*Math.pow(1+n0(a.incomeGrowth)/100, y-startYear) : 0;
+    const income = ruleAdj(rules,'income',age,work) + (age>=n0(a.pensionAge) ? n0(a.pension) : 0);
+    const expense = ruleAdj(rules,'expense',age,exp);
+    const begin = bal, retAmt = begin*r;
+    const fun = Math.max(0,income) * (begin>n0(a.richAt) ? n0(a.richRate) : n0(a.funRate))/100;
+    const one = oneoff[age]||0;
+    const end = begin + retAmt + income - expense - fun + one;
+    rows.push({year:y, age, begin, r, inf, retAmt, income, work, expense, fun, one, end,
+      need: r>inf ? expense/(r-inf) : Infinity, need4: expense*25});
+    bal = end;
+  }
+  return rows;
+}
+// safe = ใช้กฎถอน 4% (ยอดที่ต้องมี = 25 เท่าของรายจ่าย) แทน
+function planSummary(plan, ctx, safe){
+  const rows = planProject(plan, ctx);
+  const needOf = r => safe ? r.need4 : r.need;
+  const fi = rows.find(r => r.begin >= needOf(r));
+  const endAt = age => { const r = rows.find(x=>x.age===age); return r ? r.end : null; };
+  const dep = rows.find(r => r.end < 0);
+  let earliest = null;
+  if(rows.length) for(let R=rows[0].age; R<=n0(plan.a.endAge); R++){
+    if(planProject(plan, ctx, {retireAge:R}).every(x=>x.end>=0)){ earliest = R; break; }
+  }
+  const first = rows[0];
+  const need0 = first ? needOf(first) : null;
+  return {rows, fi, fiAge: fi?fi.age:null, fiYear: fi?fi.year:null, at80:endAt(80), at90:endAt(90),
+    depleteAge: dep?dep.age:null, earliest, need0, progress: (first && isFinite(need0) && need0>0) ? first.begin/need0 : null};
+}
+
+/* ---------- Budget vs Actual (รายปี) ----------
+   งบรายจ่าย = ieCfg.budgets (ชุดเดียวกับแท็บรายรับรายจ่าย) · งบรายรับและเงินเที่ยว = state.budget[ปี]
+   งบฟุ่มเฟือย = % ของงบรายได้งาน · คาดการณ์ทั้งปี = จริงถึงเดือนล่าสุด + งบของเดือนที่เหลือ (รายจ่ายรายปีใช้ค่าที่มากกว่า) */
+// planIncome = รายได้งานของปีนั้นจากแผนหลัก ใช้เป็นงบรายรับเมื่อยังไม่ได้ตั้งงบรายหมวด
+function budgetVsActual(state, year, planIncome){
+  const cfg = state.ieCfg || defaultIeCfg(), B = cfg.budgets || {};
+  const rec = state.budget && state.budget[year];
+  const bud = (rec && !rec.deleted) ? rec : {inc:{}, trip:0};
+  const Y = ieYear(state, year), M = Y.months;
+  const lastM = M.length ? M[M.length-1].m : 0, share = lastM/12;
+  const act = id => M.reduce((t,m)=>t+n0(m.v[id]),0);
+  const L = (grp,id,n,b,a,fc) => ({grp, id, n, budget:b, toDate:b*share, actual:a, forecast: fc!==undefined ? fc : a + b*(1-share)});
+  const lines = [];
+  const hasInc = IE.income.some(i=>n0(bud.inc && bud.inc[i.id]));
+  if(!hasInc && n0(planIncome)){
+    // ยังไม่ตั้งงบรายหมวด: เทียบรายได้งานรวมกับแผนหลัก ส่วนรายได้จากการลงทุนแสดงยอดจริงอย่างเดียว
+    const fa = IE.income.filter(i=>i.fun).reduce((t,i)=>t+act(i.id),0);
+    lines.push(L('inc', '_plan', 'รายได้งานรวม (งบจากแผนหลัก)', n0(planIncome), fa));
+    for(const i of IE.income.filter(i=>!i.fun)){ const a = act(i.id); if(a) lines.push(L('inc', i.id, i.n, 0, a)); }
+  }else for(const i of IE.income){
+    const b = n0(bud.inc && bud.inc[i.id]), a = act(i.id);
+    if(b || a) lines.push(L('inc', i.id, i.n, b, a));
+  }
+  for(const c of IE.monthly) lines.push(L('mon', c.id, c.n, n0(B[c.id])*12, act(c.id)));
+  for(const c of IE.annual){
+    const b = n0(B[c.id]), a = c.subs ? c.subs.reduce((t,id)=>t+act(id),0) : act(c.id);
+    lines.push(L('ann', c.id, c.n, b, a, Math.max(a,b)));
+  }
+  const workBud = hasInc ? IE.income.filter(i=>i.fun).reduce((t,i)=>t+n0(bud.inc && bud.inc[i.id]),0) : n0(planIncome);
+  lines.push(L('fun', 'fun', IE.fun.n, workBud*n0(cfg.funRate), act('fun')));
+  lines.push(L('trip', 'trip', IE.trip.n, n0(bud.trip), act('trip')));
+  const sum = (grps, k) => lines.filter(l=>grps.includes(l.grp)).reduce((t,l)=>t+l[k],0);
+  const T = {};
+  for(const k of ['budget','toDate','actual','forecast']){
+    const inc = sum(['inc'],k), exp = sum(['mon','ann'],k), fun = sum(['fun'],k);
+    T[k] = {inc, exp, fun, trip: sum(['trip'],k), save: inc - exp - fun};   // เงินเที่ยวนับเป็นเงินออม (เหมือนแท็บรายรับรายจ่าย)
+  }
+  const monthlySaveBud = T.budget.save/12;
+  let cum = 0;
+  const cumRows = M.map(m=>{ cum += m.saved; return {m:m.m, actual:cum, budget:monthlySaveBud*m.m}; });
+  return {year, lastM, lines, T, cumRows, hasIncBudget: hasInc, fromPlan: !hasInc && !!n0(planIncome), rec: rec||null};
+}
+
 /* ---------- สถานะ / migrate / merge ---------- */
 const NEW_ACCOUNTS = [
   {id:'sv-bls-cash', n:'เงินสดในพอร์ต BLS', c:'saving'},
@@ -254,13 +376,17 @@ function migrate(s){
   if(!s.ie) s.ie = {};
   if(!s.projects) s.projects = {};
   if(!s.ieCfg) s.ieCfg = defaultIeCfg();
+  if(!s.plans) s.plans = {};
+  if(!s.plans.main) s.plans.main = defaultPlan();
+  if(!s.budget) s.budget = {};
   s.v = 2;
   return s;
 }
 function normState(s){
   return {v:2, accounts:s.accounts, cf:s.cf, exp:s.exp, settingsUpdatedAt:s.settingsUpdatedAt||0,
     snapshots:[...(s.snapshots||[])].sort((a,b)=>a.date.localeCompare(b.date)),
-    ie: sortObj(s.ie||{}), ieCfg: s.ieCfg||null, projects: sortObj(s.projects||{})};
+    ie: sortObj(s.ie||{}), ieCfg: s.ieCfg||null, projects: sortObj(s.projects||{}),
+    plans: sortObj(s.plans||{}), budget: sortObj(s.budget||{})};
 }
 function sortObj(o){ const r={}; for(const k of Object.keys(o).sort()) r[k]=o[k]; return r; }
 function mergeMap(a, b){
@@ -280,7 +406,8 @@ function mergeStates(a, b){
   const ieCfg = !ca ? cb : !cb ? ca : ((ca.updatedAt||0) >= (cb.updatedAt||0) ? ca : cb);
   return migrate(normState({accounts:base.accounts, cf:base.cf, exp:base.exp,
     settingsUpdatedAt:base.settingsUpdatedAt||0, snapshots:Object.values(map),
-    ie: mergeMap(a.ie, b.ie), ieCfg, projects: mergeMap(a.projects, b.projects)}));
+    ie: mergeMap(a.ie, b.ie), ieCfg, projects: mergeMap(a.projects, b.projects),
+    plans: mergeMap(a.plans, b.plans), budget: mergeMap(a.budget, b.budget)}));
 }
 
 /* ---------- ค่าในงวด ---------- */
@@ -327,7 +454,7 @@ function b64ToUtf8(b){ return _td.decode(_unb64(b.replace(/\n/g,''))); }
 // เพื่อกันหน้าเว็บเวอร์ชันเก่าที่ยังเปิดค้างอยู่เขียนทับแล้วทำข้อมูลใหม่หาย
 const GH = {owner:'tpnaudit', repo:'port-tracker', path:'data2.enc.json', legacyPath:'data.enc.json', branch:'data'};
 
-const api = {reconcile, pickPeriod, snapTotal, CATS, IE, IE_EXP_IDS, defaultIeCfg, ieYear, projectTotals, ieCatalog, srcKey, parseSrc, linkedAmount, lineAct, NEW_ACCOUNTS, migrate, normState,
+const api = {defaultPlan, PLAN_WHAT, planProject, planSummary, budgetVsActual, reconcile, pickPeriod, snapTotal, CATS, IE, IE_EXP_IDS, defaultIeCfg, ieYear, projectTotals, ieCatalog, srcKey, parseSrc, linkedAmount, lineAct, NEW_ACCOUNTS, migrate, normState,
   mergeStates, mergeMap, evalExpr, cellVal, encryptJSON, decryptJSON, utf8ToB64, b64ToUtf8, GH, n0};
 root.PortCore = api;
 if(typeof module!=='undefined' && module.exports) module.exports = api;

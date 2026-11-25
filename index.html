@@ -179,6 +179,23 @@ footer{margin-top:28px;color:var(--mute);font-size:12px;text-align:center}
 .pj-line input,.pj-line select{width:100%}
 .pj-sec{font-size:12.5px;color:var(--muted);margin:12px 0 6px}
 td.carried{color:var(--warn);background:var(--warn-soft)}
+.sech{font-size:17px;font-weight:600;margin-right:6px}
+.pl-grid{display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center;margin-bottom:7px;font-size:13.5px}
+.pl-grid input{width:100%}
+.pl-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:14px;margin-bottom:14px}
+@media(max-width:1100px){.pl-wrap{grid-template-columns:1fr}}
+.pl-rule{display:grid;grid-template-columns:58px 58px minmax(96px,1fr) minmax(96px,1fr) 110px 26px;gap:6px;align-items:center;margin-bottom:6px}
+.pl-one{display:grid;grid-template-columns:62px 1fr 120px 26px;gap:6px;align-items:center;margin-bottom:6px}
+.pl-rule input,.pl-rule select,.pl-one input{width:100%;padding:5px 7px;font-size:13.5px}
+.pl-head{font-size:11.5px;color:var(--mute)}
+tr.fi td,tr.fi td.name{background:var(--acc-soft);font-weight:600}
+tr.broke td{color:var(--bad)}
+td.cmpd{font-size:12px}
+@media(max-width:760px){
+  .pl-rule{grid-template-columns:1fr 1fr 26px}
+  .pl-rule > :nth-child(3),.pl-rule > :nth-child(4){grid-column:span 1}
+  .pl-head{display:none}
+}
 .prev{font-size:11px;color:var(--muted);text-align:right}
 .prev.big{color:var(--warn);font-weight:500}
 @media(max-width:760px){
@@ -197,6 +214,7 @@ td.carried{color:var(--warn);background:var(--warn-soft)}
     <div class="tab" data-tab="table" onclick="switchTab('table')">ตารางพอร์ต</div>
     <div class="tab" data-tab="ret" onclick="switchTab('ret')">ผลตอบแทนจริง</div>
     <div class="tab" data-tab="ie" onclick="switchTab('ie')">รายรับรายจ่าย</div>
+    <div class="tab" data-tab="plan" onclick="switchTab('plan')">แผนการเงิน</div>
     <div class="tab" data-tab="proj" onclick="switchTab('proj')">Projects</div>
     <div class="tab" data-tab="settings" onclick="switchTab('settings')">ตั้งค่า</div>
   </nav>
@@ -280,6 +298,34 @@ td.carried{color:var(--warn);background:var(--warn-soft)}
     </div>
     <div class="tablewrap" id="ieTable"></div>
     <div class="hint" style="margin-top:8px">งบฟุ่มเฟือย = 15% ของรายได้งาน (วิชาชีพ + นายหน้า + เงินคืนภาษี) − รายจ่ายประจำที่เกินงบ − รายจ่ายรายปีที่เกินแพลน ยอดที่ไม่ใช้ทบไปเดือนถัดไป (สูตรเดียวกับชีต Track_expense) · อัตราออม นับเงินเที่ยวเป็นเงินออม</div>
+  </div>
+
+  <div id="tab-plan" style="display:none">
+    <div class="mrow" style="align-items:center">
+      <h2 class="sech">Budget vs Actual</h2>
+      <select id="bvaYear" onchange="renderBva()"></select>
+      <div class="spacer"></div>
+      <button class="btn" onclick="openBudget()">ตั้งงบปีนี้</button>
+    </div>
+    <div id="bvaWarn"></div>
+    <div class="cards" id="bvaCards"></div>
+    <div class="tablewrap" id="bvaTable" style="margin-bottom:14px"></div>
+    <div class="panel"><h3>เงินออมสะสม: จริง vs งบ</h3><div class="chartbox"><canvas id="chBva"></canvas></div></div>
+
+    <div class="mrow" style="align-items:center;margin-top:26px">
+      <h2 class="sech">แผนระยะยาว</h2>
+      <div class="seg" id="planSeg"></div>
+      <div class="spacer"></div>
+      <label class="chkline"><input type="checkbox" id="planSafe" onchange="renderPlan()"> คิดยอดที่ต้องมีด้วยกฎถอน 4%</label>
+    </div>
+    <div class="cards" id="planCards"></div>
+    <div class="panel" style="margin-bottom:14px"><h3 id="planChartTitle">ยอดเงินในพอร์ตตามอายุ</h3><div class="chartbox tall"><canvas id="chPlan"></canvas></div></div>
+    <div class="pl-wrap">
+      <div class="panel" id="planAssump"></div>
+      <div class="panel"><div id="planRules"></div><div id="planOneoffs" style="margin-top:18px"></div></div>
+    </div>
+    <div class="tablewrap" id="planTable"></div>
+    <div class="hint" style="margin-top:8px">สูตรเดียวกับชีต budget_set_2026: ปลายปี = ต้นปี × (1 + ผลตอบแทน) + รายได้ − รายจ่าย − ฟุ่มเฟือย + รายการก้อน · รายจ่ายโตตามเงินเฟ้อทุกปี · <b>จุดอิสรภาพทางการเงิน</b> = ปีแรกที่พอร์ตต้นปี ≥ รายจ่ายปีนั้น ÷ (ผลตอบแทน − เงินเฟ้อ): ผลตอบแทนจ่ายค่าใช้จ่ายได้ และพอร์ตยังโตทันเงินเฟ้อ จึงอยู่ได้ตลอดไปโดยไม่ต้องทำงาน · กฎถอน 4% = ยอดที่ต้องมี 25 เท่าของรายจ่าย</div>
   </div>
 
   <div id="tab-proj" style="display:none">
@@ -391,6 +437,21 @@ td.carried{color:var(--warn);background:var(--warn-soft)}
       <button class="btn danger" onclick="deleteProject()">ลบ</button>
       <button class="btn" onclick="closeOv('projOverlay')">ยกเลิก</button>
       <button class="btn primary" onclick="saveProject()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- budget modal -->
+<div class="overlay" id="budOverlay">
+  <div class="modal">
+    <h2 id="budTitle">ตั้งงบ</h2>
+    <div class="hint" style="margin-bottom:12px">งบรายจ่ายเป็นชุดเดียวกับแท็บรายรับรายจ่าย (ใช้คิดงบฟุ่มเฟือย) · งบฟุ่มเฟือย = % ของงบรายได้งาน · ช่องตัวเลขพิมพ์สูตรได้ เช่น 12*80000</div>
+    <div id="budFields"></div>
+    <div class="modalfoot">
+      <div class="mut" id="budSum"></div>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeOv('budOverlay')">ยกเลิก</button>
+      <button class="btn primary" onclick="saveBudget()">บันทึก</button>
     </div>
   </div>
 </div>
@@ -582,8 +643,9 @@ function toast(msg){
 /* ================= TABS ================= */
 function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
-  document.getElementById('pageTitle').textContent = {overview:'ภาพรวม',table:'ตารางพอร์ต',ret:'ผลตอบแทนจริง',ie:'รายรับรายจ่าย',proj:'Projects',settings:'ตั้งค่า'}[id];
-  for(const k of ['overview','table','ret','ie','proj','settings']) document.getElementById('tab-'+k).style.display = k===id?'':'none';
+  document.getElementById('pageTitle').textContent = {overview:'ภาพรวม',table:'ตารางพอร์ต',ret:'ผลตอบแทนจริง',ie:'รายรับรายจ่าย',plan:'แผนการเงิน',proj:'Projects',settings:'ตั้งค่า'}[id];
+  for(const k of ['overview','table','ret','ie','plan','proj','settings']) document.getElementById('tab-'+k).style.display = k===id?'':'none';
+  if(id==='plan') renderPlanTab();
   if(id==='overview') renderOverview();
   if(id==='table') renderTable();
   if(id==='settings') renderSettings();
@@ -1281,6 +1343,241 @@ function renderRet(){
     `</tbody></table>`;
 }
 
+/* ================= แผนการเงิน ================= */
+const be = y => y+543;
+function planCtx(){
+  const S = sortedSnaps(); if(!S.length) return null;
+  const last = S[S.length-1], T = snapTotals(last);
+  return {actualDate:last.date, actualTotal:T.total, actualExRe:T.total-T.byCat.re};
+}
+// แถวแผนหลักของปีนั้น (ใช้เป็นเป้าพอร์ตสิ้นปี): ใช้ยอดจริงถ้าแผนเริ่มจากยอดจริงแล้ว ไม่งั้นใช้ยอดตั้งต้นของแผน
+function mainPlanRow(year){
+  const P = state.plans.main, ctx = planCtx();
+  return PortCore.planProject(P, ctx).find(r=>r.year===year) || PortCore.planProject(P, ctx, {useActual:false}).find(r=>r.year===year) || null;
+}
+function renderPlanTab(){ renderBva(); renderPlan(); }
+
+function renderBva(){
+  const sel = document.getElementById('bvaYear'); if(!sel || !state) return;
+  const cur = Number(sel.value) || new Date().getFullYear();
+  sel.innerHTML = ieYears().map(y=>`<option value="${y}" ${y===cur?'selected':''}>ปี ${be(y)}</option>`).join('');
+  const prow = mainPlanRow(cur);
+  const R = PortCore.budgetVsActual(state, cur, prow ? prow.work : 0), T = R.T, mn = R.lastM ? MN[R.lastM-1] : '';
+  const snapsY = sortedSnaps().filter(s=>s.date.slice(0,4)===String(cur));
+  const portNow = snapsY.length ? snapTotals(snapsY[snapsY.length-1]).total : null;
+  const W = [];
+  if(R.fromPlan) W.push(`ยังไม่ได้ตั้งงบรายรับรายหมวดของปี ${be(cur)} จึงใช้รายได้งานจากแผนหลัก ฿${fmt(prow.work)} เป็นงบ (กด "ตั้งงบปีนี้" เพื่อแยกหมวด)`);
+  else if(!R.hasIncBudget) W.push(`ยังไม่ได้ตั้งงบรายรับปี ${be(cur)} กด "ตั้งงบปีนี้"`);
+  if(!R.lastM) W.push('ยังไม่มีรายรับรายจ่ายของปีนี้');
+  else if(cur===new Date().getFullYear() && R.lastM < new Date().getMonth()+1) W.push(`รายรับรายจ่ายมีถึง ${mn} ตัวเลข "ถึงเดือนนี้" จึงเทียบถึง ${mn}`);
+  document.getElementById('bvaWarn').innerHTML = W.length ? `<div class="warnbox"><ul>${W.map(w=>`<li>${w}</li>`).join('')}</ul></div>` : '';
+  const vs = (a,b,inc) => { if(!b) return ''; const d = inc ? a-b : b-a; return `<span class="${d>=0?'pos':'neg'}">${d>=0?'ดีกว่างบ':'แย่กว่างบ'} ฿${fmt(Math.abs(d))}</span>`; };
+  const cards = [
+    {l:`รายรับ ถึง ${mn}`, v:'฿'+fmt(T.actual.inc), d:`งบ ฿${fmt(T.toDate.inc)} · ${vs(T.actual.inc,T.toDate.inc,true)}`},
+    {l:`รายจ่ายรวมฟุ่มเฟือย ถึง ${mn}`, v:'฿'+fmt(T.actual.exp+T.actual.fun), d:`งบ ฿${fmt(T.toDate.exp+T.toDate.fun)} · ${vs(T.actual.exp+T.actual.fun,T.toDate.exp+T.toDate.fun,false)}`},
+    {l:`เงินออม ถึง ${mn}`, v:'฿'+fmt(T.actual.save), d:`งบ ฿${fmt(T.toDate.save)} · ${vs(T.actual.save,T.toDate.save,true)}`},
+    {l:'คาดการณ์เงินออมทั้งปี', v:'฿'+fmt(T.forecast.save), d:`เป้า ฿${fmt(T.budget.save)} · ${vs(T.forecast.save,T.budget.save,true)}`},
+  ];
+  if(prow) cards.push({l:`พอร์ตสิ้นปี ${be(cur)} (เป้าจากแผนหลัก)`, v: portNow!=null ? '฿'+fmt(portNow) : '—',
+    d:`เป้า ฿${fmt(prow.end)}${portNow!=null?` · มาได้ ${Math.round(portNow/prow.end*100)}%`:''}`});
+  document.getElementById('bvaCards').innerHTML = R.lastM ? cards.map(c=>`<div class="card"><div class="lbl">${c.l}</div><div class="val">${c.v}</div><div class="delta">${c.d}</div></div>`).join('') : '';
+
+  const grpN = {inc:'รายรับ', mon:'รายจ่ายประจำ', ann:'รายจ่ายรายปี', fun:'ฟุ่มเฟือย', trip:'ออมเที่ยว'};
+  const up = l => l.grp==='inc' || l.grp==='trip';   // ยิ่งมากยิ่งดี (เงินเที่ยวนับเป็นเงินออม)
+  const fav = (l, a, b) => up(l) ? a-b : b-a;
+  const cell = d => `<td class="${d>=0?'pos':'neg'}">${d>=0?'+':'−'}${fmt(Math.abs(d))}</td>`;
+  const line = l => {
+    const pct = l.budget ? l.actual/l.budget : 0, over = !up(l) && pct>1;
+    return `<tr class="sub"><td class="name">${esc(l.n)}</td><td>${fmt(l.budget)}</td><td class="mut">${l.grp==='ann'?'':fmt(l.toDate)}</td><td>${fmt(l.actual)}</td>
+      ${l.grp==='ann' ? '<td class="mut">ทั้งปี</td>' : cell(fav(l,l.actual,l.toDate))}
+      <td style="min-width:90px">${l.budget?`<div class="bar" style="margin:0"><i class="${over?'over':''}" style="width:${Math.min(100,pct*100)}%"></i></div><div class="hint">${Math.round(pct*100)}%</div>`:''}</td>
+      <td>${fmt(l.forecast)}</td>${l.budget?cell(fav(l,l.forecast,l.budget)):'<td></td>'}</tr>`;
+  };
+  let h = `<table><thead><tr><th class="name">หมวด</th><th>งบทั้งปี</th><th>งบถึง ${mn}</th><th>จริงถึง ${mn}</th><th>ดีกว่า (+) / แย่กว่า (−)</th><th>ใช้ไป</th><th>คาดการณ์ทั้งปี</th><th>เทียบงบทั้งปี</th></tr></thead><tbody>`;
+  for(const g of Object.keys(grpN)){
+    const L = R.lines.filter(l=>l.grp===g); if(!L.length) continue;
+    if(L.length>1){ const s = k=>L.reduce((t,l)=>t+l[k],0);
+      h += `<tr class="cat"><td class="name">${grpN[g]}</td><td>${fmt(s('budget'))}</td><td class="mut">${g==='ann'?'':fmt(s('toDate'))}</td><td>${fmt(s('actual'))}</td><td></td><td></td><td>${fmt(s('forecast'))}</td><td></td></tr>`; }
+    h += L.map(line).join('');
+  }
+  h += `<tr class="total"><td class="name">เงินออม (รวมเงินเที่ยว)</td><td>${fmt(T.budget.save)}</td><td>${fmt(T.toDate.save)}</td><td>${fmt(T.actual.save)}</td>${cell(T.actual.save-T.toDate.save)}<td></td><td>${fmt(T.forecast.save)}</td>${cell(T.forecast.save-T.budget.save)}</tr>`;
+  document.getElementById('bvaTable').innerHTML = h + '</tbody></table>';
+  mkChart('chBva',{type:'line',data:{labels:R.cumRows.map(x=>MN[x.m-1]),datasets:[
+      {label:'จริง',data:R.cumRows.map(x=>x.actual),borderColor:'#0d7a6b',backgroundColor:'rgba(13,122,107,.10)',fill:true,tension:.25,pointRadius:3},
+      {label:'งบ',data:R.cumRows.map(x=>x.budget),borderColor:'#8a9a9f',borderDash:[6,4],pointRadius:0,tension:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:CH.ink,boxWidth:12,font:{family:FONT}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' ฿'+nf.format(Math.round(c.raw))}}},
+      scales:{x:{ticks:{color:CH.tick,font:{family:FONT,size:10}},grid:{display:false}},y:{ticks:{color:CH.tick,callback:v=>nf.format(v),font:{size:10}},grid:{color:CH.grid}}}}});
+}
+
+/* ----- ตั้งงบ ----- */
+let budYear = null;
+function openBudget(){
+  budYear = Number(document.getElementById('bvaYear').value) || new Date().getFullYear();
+  const rec = state.budget[budYear] && !state.budget[budYear].deleted ? state.budget[budYear] : null;
+  const inc = rec ? rec.inc||{} : {}, B = state.ieCfg.budgets, prow = mainPlanRow(budYear);
+  document.getElementById('budTitle').textContent = `ตั้งงบปี ${be(budYear)}`;
+  const f = (attr, id, n, val, note) => `<div class="ie-grid"><div>${n}</div><input class="num" style="width:100%" ${attr}="${id}" value="${fmtIn(val)}" inputmode="decimal" oninput="budSum()"><div class="b">${note||''}</div></div>`;
+  let h = `<div class="groupbox"><div class="grouphead"><b>รายรับ (บาท/ปี)</b><span class="gt mut" style="font-weight:400;font-size:12.5px">${prow?`แผนหลัก: รายได้งาน ฿${fmt(prow.work)}`:''}</span></div>`;
+  h += IE.income.map(i=>f('data-binc', i.id, i.n, inc[i.id]||'', i.fun?'คิดงบฟุ่มเฟือย':'')).join('') + '</div>';
+  h += `<div class="groupbox"><div class="grouphead"><b>รายจ่ายประจำ (บาท/เดือน)</b></div>` + IE.monthly.map(c=>f('data-bexp', c.id, c.n, B[c.id]||'', 'ต่อเดือน')).join('') + '</div>';
+  h += `<div class="groupbox"><div class="grouphead"><b>รายจ่ายรายปี (บาท/ปี)</b></div>` + IE.annual.map(c=>f('data-bexp', c.id, c.n, B[c.id]||'', 'ต่อปี')).join('') + '</div>';
+  h += `<div class="groupbox"><div class="grouphead"><b>อื่น ๆ</b></div>` + f('data-bfun','fun','งบฟุ่มเฟือย % ของรายได้งาน', Math.round(state.ieCfg.funRate*1000)/10, '%') + f('data-btrip','trip','ออมเงินเที่ยว (บาท/ปี)', rec?rec.trip||'':'', 'ต่อปี') + '</div>';
+  document.getElementById('budFields').innerHTML = h;
+  budSum();
+  document.getElementById('budOverlay').classList.add('open');
+}
+function budRead(){
+  const g = sel => { const o = {}; let bad = false;
+    document.querySelectorAll(sel).forEach(el=>{ const x = evalExpr(el.value); el.classList.toggle('err', isNaN(x)); if(isNaN(x)) bad = true; else o[el.getAttribute(sel.slice(1,-1))] = x; });
+    return [o, bad]; };
+  const [inc,b1] = g('[data-binc]'), [exp,b2] = g('[data-bexp]'), [fun,b3] = g('[data-bfun]'), [trip,b4] = g('[data-btrip]');
+  return {inc, exp, funRate:(fun.fun||0)/100, trip:trip.trip||0, bad:b1||b2||b3||b4};
+}
+function budSum(){
+  const r = budRead();
+  const inc = Object.values(r.inc).reduce((t,x)=>t+x,0);
+  const work = IE.income.filter(i=>i.fun).reduce((t,i)=>t+(r.inc[i.id]||0),0);
+  const exp = IE.monthly.reduce((t,c)=>t+(r.exp[c.id]||0)*12,0) + IE.annual.reduce((t,c)=>t+(r.exp[c.id]||0),0);
+  const fun = work*r.funRate;
+  document.getElementById('budSum').textContent = `รับ ฿${fmt(inc)} · จ่าย ฿${fmt(exp)} · ฟุ่มเฟือย ฿${fmt(fun)} · ออมได้ ฿${fmt(inc-exp-fun)}/ปี`;
+}
+function saveBudget(){
+  const r = budRead(); if(r.bad){ toast('มีช่องที่สูตรผิด (สีแดง)'); return; }
+  const inc = {}; for(const [k,v] of Object.entries(r.inc)) if(v) inc[k] = v;
+  state.budget[budYear] = {inc, trip:r.trip, updatedAt:Date.now()};
+  const C = state.ieCfg; let ch = Math.abs(C.funRate - r.funRate) > 1e-9;
+  for(const [k,v] of Object.entries(r.exp)) if((C.budgets[k]||0)!==v){ C.budgets[k] = v; ch = true; }
+  C.funRate = r.funRate;
+  if(ch) C.updatedAt = Date.now();
+  save(); closeOv('budOverlay'); renderPlanTab(); toast('บันทึกงบแล้ว');
+}
+
+/* ----- แผนระยะยาว / ลองเล่น ----- */
+let planSel = 'main';
+function planList(){ return Object.values(state.plans).filter(p=>p && !p.deleted).sort((a,b)=>(b.main?1:0)-(a.main?1:0) || (a.created||0)-(b.created||0)); }
+function curPlan(){ if(!state.plans[planSel] || state.plans[planSel].deleted) planSel = 'main'; return state.plans[planSel]; }
+function planTouch(){ curPlan().updatedAt = Date.now(); save(); renderPlan(); }
+function planSetA(k, v, kind){
+  const P = curPlan();
+  if(kind==='bool') P.a[k] = !!v;
+  else if(k==='age'){ const x = evalExpr(v); if(!isNaN(x)) P.a.birthYear = P.a.startYear - x; }
+  else { const x = evalExpr(v); if(isNaN(x)){ toast('ตัวเลขไม่ถูกต้อง'); return; } P.a[k] = x; }
+  planTouch();
+}
+function planName(v){ curPlan().name = v.trim() || 'ลองเล่น'; planTouch(); }
+function planNew(){
+  const src = curPlan(), id = 'p'+Date.now().toString(36);
+  const n = planList().filter(p=>!p.main).length + 1;
+  state.plans[id] = {...JSON.parse(JSON.stringify(src)), id, name:'ลองเล่น '+n, main:false, created:Date.now(), updatedAt:Date.now()};
+  planSel = id; save(); renderPlan(); toast('ก๊อปแผนแล้ว ลองเปลี่ยนตัวเลขได้เลย');
+}
+function planDelete(){
+  const P = curPlan(); if(P.main || !confirm(`ลบ "${P.name}"?`)) return;
+  state.plans[P.id] = {id:P.id, deleted:true, updatedAt:Date.now()};
+  planSel = 'main'; save(); renderPlan();
+}
+function planPick(id){ planSel = id; renderPlan(); }
+function ruleAdd(){ curPlan().rules.push({id:'r'+Date.now().toString(36), from:'', to:'', what:'income', how:'pct', v:''}); planTouch(); }
+function ruleSet(id, f, v){
+  const r = curPlan().rules.find(x=>x.id===id); if(!r) return;
+  if(f==='from'||f==='to'||f==='v'){ v = String(v).trim(); if(v!==''){ const x = evalExpr(v); if(isNaN(x)){ toast('ตัวเลขไม่ถูกต้อง'); return; } v = x; } }
+  r[f] = v; planTouch();
+}
+function ruleDel(id){ const P = curPlan(); P.rules = P.rules.filter(x=>x.id!==id); planTouch(); }
+function oneAdd(){ curPlan().oneoffs.push({id:'o'+Date.now().toString(36), age:'', amt:'', n:''}); planTouch(); }
+function oneSet(id, f, v){
+  const o = curPlan().oneoffs.find(x=>x.id===id); if(!o) return;
+  if(f!=='n'){ const x = evalExpr(v); if(isNaN(x)){ toast('ตัวเลขไม่ถูกต้อง'); return; } v = x; }
+  o[f] = v; planTouch();
+}
+function oneDel(id){ const P = curPlan(); P.oneoffs = P.oneoffs.filter(x=>x.id!==id); planTouch(); }
+
+function renderPlan(){
+  if(!state || !state.plans || !document.getElementById('planSeg')) return;
+  const P = curPlan(), safe = document.getElementById('planSafe').checked, ctx = planCtx();
+  document.getElementById('planSeg').innerHTML = planList().map(p=>`<button class="${p.id===P.id?'on':''}" onclick="planPick('${p.id}')">${esc(p.name)}</button>`).join('') +
+    `<button onclick="planNew()">＋ ลองเล่น</button>`;
+  const S = PortCore.planSummary(P, ctx, safe);
+  const Sm = P.main ? null : PortCore.planSummary(state.plans.main, ctx, safe);
+  const first = S.rows[0];
+  if(!first){ document.getElementById('planCards').innerHTML = '<div class="mut">ตั้งค่าแผนยังไม่ครบ</div>'; return; }
+  const nowAge = first.age;
+  const cmp = (a, b, unit, lowerBetter) => { if(Sm==null || a==null || b==null || a===b) return ''; const d = a-b, good = lowerBetter ? d<0 : d>0;
+    return ` · <span class="${good?'pos':'neg'}">${lowerBetter?(d<0?'เร็วกว่า':'ช้ากว่า'):(d>0?'มากกว่า':'น้อยกว่า')}แผนหลัก ${Math.abs(d)} ${unit}</span>`; };
+  const cards = [
+    {l:'จุดอิสรภาพทางการเงิน', v: S.fiAge!=null ? `อายุ ${S.fiAge}` : 'ยังไม่ถึง',
+     d: S.fiAge!=null ? `ปี ${be(S.fiYear)} · อีก ${S.fiAge-nowAge} ปี${cmp(S.fiAge, Sm&&Sm.fiAge, 'ปี', true)}` : 'ผลตอบแทนยังไม่พอจ่ายรายจ่าย + เงินเฟ้อ จนถึงอายุสุดท้ายของแผน', c: S.fiAge!=null?'pos':'neg'},
+    {l:`ตอนนี้มาได้ (ยอดที่ต้องมีปี ${be(first.year)})`, v: S.progress!=null ? Math.round(S.progress*100)+'%' : '—',
+     d:`มี ฿${fmt(first.begin)} / ต้องมี ฿${isFinite(S.need0)?fmt(S.need0):'—'}`, c: S.progress>=1?'pos':''},
+    {l:'เงินพอใช้ถึงอายุ', v: S.depleteAge!=null ? `หมดตอนอายุ ${S.depleteAge}` : `พอถึง ${P.a.endAge}`,
+     d:`อายุ 80 เหลือ ฿${S.at80!=null?fmt(S.at80):'—'} · 90 เหลือ ฿${S.at90!=null?fmt(S.at90):'—'}`, c: S.depleteAge!=null?'neg':'pos'},
+    {l:`หยุดทำงานได้เร็วสุด (เงินยังพอถึง ${P.a.endAge})`, v: S.earliest!=null ? `อายุ ${S.earliest}` : 'ไม่ได้',
+     d:`แผนนี้ทำงานถึงอายุ ${P.a.retireAge-1}${cmp(S.earliest, Sm&&Sm.earliest, 'ปี', true)}`, c: S.earliest!=null?'pos':'neg'},
+  ];
+  document.getElementById('planCards').innerHTML = cards.map(c=>`<div class="card"><div class="lbl">${c.l}</div><div class="val ${c.c}">${c.v}</div><div class="delta">${c.d}</div></div>`).join('');
+
+  // กราฟ
+  const ages = S.rows.map(r=>r.age), needOf = r => safe ? r.need4 : r.need;
+  const ds = [{label:P.name, data:S.rows.map(r=>Math.round(r.end)), borderColor:'#0d7a6b', backgroundColor:'rgba(13,122,107,.08)', fill:true, tension:.2, pointRadius:0, borderWidth:2.5}];
+  if(Sm){ const m = {}; Sm.rows.forEach(r=>m[r.age]=r.end); ds.push({label:'แผนหลัก', data:ages.map(a=>m[a]!=null?Math.round(m[a]):null), borderColor:'#31577a', borderDash:[6,4], pointRadius:0, borderWidth:2}); }
+  ds.push({label: safe?'ยอดที่ต้องมี (กฎ 4%)':'ยอดที่ต้องมี (อิสรภาพทางการเงิน)', data:S.rows.map(r=>isFinite(needOf(r))?Math.round(needOf(r)):null), borderColor:'#d99a1e', borderDash:[2,3], pointRadius:0, borderWidth:2});
+  mkChart('chPlan',{type:'line',data:{labels:ages.map(a=>'อายุ '+a),datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:CH.ink,boxWidth:12,font:{family:FONT}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' ฿'+nf.format(c.raw)}}},
+      scales:{x:{ticks:{color:CH.tick,font:{family:FONT,size:10},maxTicksLimit:16},grid:{display:false}},y:{ticks:{color:CH.tick,callback:v=>nf.format(v/1e6)+' ล.',font:{size:10}},grid:{color:CH.grid}}}}});
+
+  // สมมติฐาน
+  const A = P.a, inp = (k, l, suf, v) => `<div class="pl-grid"><div>${l}${suf?` <span class="mut">(${suf})</span>`:''}</div><input class="num" value="${fmtIn(v!==undefined?v:A[k])}" inputmode="decimal" onchange="planSetA('${k}',this.value)"></div>`;
+  const chk = (k, l) => `<label class="chkline" style="margin-bottom:8px"><input type="checkbox" ${A[k]?'checked':''} onchange="planSetA('${k}',this.checked,'bool')"> ${l}</label>`;
+  document.getElementById('planAssump').innerHTML =
+    `<h3>สมมติฐาน${P.main?'':' · '+esc(P.name)}</h3>` +
+    (P.main ? '' : `<div class="pl-grid"><div>ชื่อฉาก</div><input value="${esc(P.name)}" onchange="planName(this.value)"></div>`) +
+    inp('ret','ผลตอบแทนคาดหวัง','%/ปี') + inp('inf','เงินเฟ้อ','%/ปี') +
+    inp('income','รายได้งาน','บาท/ปี') + inp('incomeGrowth','รายได้โตปีละ','%') + inp('retireAge','หยุดทำงานตอนอายุ','') +
+    inp('expense',`รายจ่าย ปี ${be(A.startYear)}`,'บาท/ปี โตตามเงินเฟ้อ') +
+    inp('funRate','ฟุ่มเฟือย','% ของรายได้') + inp('richRate','ฟุ่มเฟือยเมื่อพอร์ตเกินเกณฑ์','%') + inp('richAt','เกณฑ์พอร์ต','บาท') +
+    inp('pension','บำนาญประกันสังคม','บาท/ปี') + inp('pensionAge','เริ่มรับบำนาญอายุ','') +
+    inp('age',`อายุในปี ${be(A.startYear)}`,'', A.startYear-A.birthYear) + inp('endAge','คำนวณถึงอายุ','') +
+    inp('startBal',`ยอดพอร์ตต้นปี ${be(A.startYear)}`,'บาท') +
+    chk('useActual', ctx ? `เริ่มจากยอดพอร์ตจริงล่าสุด ฿${fmt(A.exRe?ctx.actualExRe:ctx.actualTotal)} (${thDate(ctx.actualDate)})` : 'เริ่มจากยอดพอร์ตจริงล่าสุด') +
+    chk('exRe','ไม่นับอสังหาฯ ในพอร์ต') +
+    (P.main ? '' : `<div style="margin-top:10px"><button class="btn danger small" onclick="planDelete()">ลบฉากนี้</button></div>`);
+
+  // what-if
+  const W = PortCore.PLAN_WHAT, HOW = {pct:'เปลี่ยน %', add:'บวก/ลบ', set:'ตั้งเป็น'};
+  const opts = (o, v) => Object.entries(o).map(([k,l])=>`<option value="${k}" ${k===v?'selected':''}>${l}</option>`).join('');
+  document.getElementById('planRules').innerHTML = `<h3>ถ้า…เปลี่ยน</h3><div class="hint" style="margin-bottom:8px">เช่น ตั้งแต่อายุ 30 รายได้ เปลี่ยน % +20 · อายุ 40–45 ผลตอบแทน % ตั้งเป็น 3 · เว้นช่อง "ถึง" = ไปจนสุดแผน</div>
+    <div class="pl-rule pl-head"><span>จากอายุ</span><span>ถึง</span><span>อะไร</span><span>แบบ</span><span>ค่า</span><span></span></div>` +
+    P.rules.map(r=>`<div class="pl-rule">
+      <input value="${r.from}" inputmode="numeric" onchange="ruleSet('${r.id}','from',this.value)" placeholder="อายุ">
+      <input value="${r.to}" inputmode="numeric" onchange="ruleSet('${r.id}','to',this.value)" placeholder="สุดแผน">
+      <select onchange="ruleSet('${r.id}','what',this.value)">${opts(W, r.what)}</select>
+      <select onchange="ruleSet('${r.id}','how',this.value)">${opts(HOW, r.how)}</select>
+      <input class="num" value="${fmtIn(r.v)}" inputmode="decimal" onchange="ruleSet('${r.id}','v',this.value)">
+      <button class="iconbtn" title="ลบ" onclick="ruleDel('${r.id}')">✕</button></div>`).join('') +
+    `<button class="addacc" onclick="ruleAdd()">＋ เพิ่มเงื่อนไข</button>`;
+  document.getElementById('planOneoffs').innerHTML = `<h3>รายการก้อน (ติดลบ = จ่าย, บวก = ได้รับ)</h3>
+    <div class="pl-one pl-head"><span>อายุ</span><span>รายการ</span><span>จำนวน</span><span></span></div>` +
+    [...P.oneoffs].sort((a,b)=>(a.age||0)-(b.age||0)).map(o=>`<div class="pl-one">
+      <input value="${o.age}" inputmode="numeric" onchange="oneSet('${o.id}','age',this.value)">
+      <input value="${esc(o.n)}" onchange="oneSet('${o.id}','n',this.value)">
+      <input class="num" value="${fmtIn(o.amt)}" inputmode="decimal" onchange="oneSet('${o.id}','amt',this.value)">
+      <button class="iconbtn" title="ลบ" onclick="oneDel('${o.id}')">✕</button></div>`).join('') +
+    `<button class="addacc" onclick="oneAdd()">＋ เพิ่มรายการ</button>`;
+
+  // ตาราง
+  const mm = {}; if(Sm) Sm.rows.forEach(r=>mm[r.age]=r.end);
+  let h = `<table><thead><tr><th class="name">ปี</th><th>อายุ</th><th>ต้นปี</th><th>ผลตอบแทน</th><th>รายได้</th><th>รายจ่าย</th><th>ฟุ่มเฟือย</th><th>รายการก้อน</th><th>ปลายปี</th><th>ยอดที่ต้องมี</th>${Sm?'<th>เทียบแผนหลัก</th>':''}</tr></thead><tbody>`;
+  h += S.rows.map(r=>{ const need = needOf(r), isFi = S.fi && r.age===S.fiAge;
+    const d = Sm && mm[r.age]!=null ? r.end - mm[r.age] : null;
+    return `<tr class="${isFi?'fi':''} ${r.end<0?'broke':''}"><td class="name">${be(r.year)}${isFi?' <span class="badge">อิสรภาพทางการเงิน</span>':''}</td><td>${r.age}</td><td>${fmt(r.begin)}</td>
+      <td>${fmt(r.retAmt)}</td><td>${r.income?fmt(r.income):'<span class="mut">–</span>'}</td><td>${fmt(-r.expense)}</td><td>${r.fun?fmt(-r.fun):'<span class="mut">–</span>'}</td>
+      <td>${r.one?fmt(r.one):'<span class="mut">–</span>'}</td><td><b>${fmt(r.end)}</b></td><td class="${r.begin>=need?'pos':'mut'}">${isFinite(need)?fmt(need):'—'}</td>
+      ${Sm?`<td class="cmpd ${d>=0?'pos':'neg'}">${d==null?'':(d>=0?'+':'−')+fmt(Math.abs(d))}</td>`:''}</tr>`; }).join('');
+  document.getElementById('planTable').innerHTML = h + '</tbody></table>';
+  document.getElementById('planChartTitle').textContent = `ยอดเงินในพอร์ตตามอายุ · ${P.name}${Sm?' เทียบแผนหลัก':''}`;
+}
+
 /* ================= ช่องตัวเลข: ใส่ลูกน้ำ ================= */
 // ตัวเลขล้วนแสดงแบบมีลูกน้ำ ส่วนสูตร (เช่น 5*63170+3*60000) แสดงตามที่พิมพ์
 function fmtIn(x){
@@ -1308,7 +1605,7 @@ async function openNewSnapshot(){
 }
 
 /* ================= INIT ================= */
-function renderAll(){ renderOverview(); renderTable(); renderSettings(); renderIE(); renderProjects(); if(document.getElementById('tab-ret').style.display!=='none') renderRet(); }
+function renderAll(){ renderOverview(); renderTable(); renderSettings(); renderIE(); renderProjects(); if(document.getElementById('tab-ret').style.display!=='none') renderRet(); if(document.getElementById('tab-plan').style.display!=='none') renderPlanTab(); }
 document.getElementById('editorOverlay').addEventListener('click', e=>{ if(e.target.id==='editorOverlay') closeEditor(); });
 async function unlockSeed(){
   const pin = document.getElementById('pinInput').value.trim();
